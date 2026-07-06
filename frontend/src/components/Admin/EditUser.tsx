@@ -6,27 +6,9 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 
 import { type UserPublic, UsersService } from "@/client"
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
+import { AppleButton } from "@/components/ui/AppleButton"
+import { AppleDialog, AppleDialogClose, AppleDialogContent, AppleDialogFooter, AppleDialogHeader, AppleDialogTitle, AppleDialogDescription } from "@/components/ui/apple/AppleDialog"
+import { AppleDropdownMenuItem } from "@/components/ui/apple/AppleDropdownMenu"
 import { LoadingButton } from "@/components/ui/loading-button"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
@@ -97,142 +79,123 @@ const EditUser = ({ user, onSuccess }: EditUserProps) => {
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DropdownMenuItem
+    <AppleDialog open={isOpen} onOpenChange={setIsOpen}>
+      <AppleDropdownMenuItem
+        variant="default"
         onSelect={(e) => e.preventDefault()}
         onClick={() => setIsOpen(true)}
       >
         <Pencil />
         Edit User
-      </DropdownMenuItem>
-      <DialogContent className="sm:max-w-md">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <DialogHeader>
-              <DialogTitle>Edit User</DialogTitle>
-              <DialogDescription>
-                Update the user details below.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      Email <span className="text-destructive">*</span>
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Email"
-                        type="email"
-                        {...field}
-                        required
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+      </AppleDropdownMenuItem>
+      <AppleDialogContent className="sm:max-w-md">
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+          <AppleDialogHeader>
+            <AppleDialogTitle>Edit User</AppleDialogTitle>
+            <AppleDialogDescription>
+              Update the user details below.
+            </AppleDialogDescription>
+          </AppleDialogHeader>
+          <div className="grid gap-4 py-4">
+            <div>
+              <label className="text-sm font-medium text-apple-text-secondary">
+                Email <span className="text-destructive">*</span>
+              </label>
+              <input
+                placeholder="Email"
+                type="email"
+                className="flex h-11 w-full rounded-xl border border-apple-glass-border/50 bg-apple-glass-bg/70 backdrop-blur-sm px-3.5 py-2.5 text-sm text-apple-text-primary placeholder:text-apple-text-tertiary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-apple-accent/40 focus-visible:border-apple-accent/50 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
+                {...form.register("email")}
+                required
               />
-
-              <FormField
-                control={form.control}
-                name="full_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Full Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Full name" type="text" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Set Password</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Password"
-                        type="password"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="confirm_password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Confirm Password</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Password"
-                        type="password"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="is_superuser"
-                render={({ field }) => (
-                  <FormItem className="flex items-center gap-3 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormLabel className="font-normal">Is superuser?</FormLabel>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="is_active"
-                render={({ field }) => (
-                  <FormItem className="flex items-center gap-3 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormLabel className="font-normal">Is active?</FormLabel>
-                  </FormItem>
-                )}
-              />
+              {form.formState.errors.email && (
+                <p className="text-sm text-destructive mt-1">{form.formState.errors.email.message}</p>
+              )}
             </div>
 
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button variant="outline" disabled={mutation.isPending}>
-                  Cancel
-                </Button>
-              </DialogClose>
-              <LoadingButton type="submit" loading={mutation.isPending}>
-                Save
-              </LoadingButton>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+            <div>
+              <label className="text-sm font-medium text-apple-text-secondary">
+                Full Name
+              </label>
+              <input
+                placeholder="Full name"
+                type="text"
+                className="flex h-11 w-full rounded-xl border border-apple-glass-border/50 bg-apple-glass-bg/70 backdrop-blur-sm px-3.5 py-2.5 text-sm text-apple-text-primary placeholder:text-apple-text-tertiary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-apple-accent/40 focus-visible:border-apple-accent/50 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
+                {...form.register("full_name")}
+              />
+              {form.formState.errors.full_name && (
+                <p className="text-sm text-destructive mt-1">{form.formState.errors.full_name.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-apple-text-secondary">
+                Set Password
+              </label>
+              <input
+                placeholder="Password"
+                type="password"
+                className="flex h-11 w-full rounded-xl border border-apple-glass-border/50 bg-apple-glass-bg/70 backdrop-blur-sm px-3.5 py-2.5 text-sm text-apple-text-primary placeholder:text-apple-text-tertiary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-apple-accent/40 focus-visible:border-apple-accent/50 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
+                {...form.register("password")}
+              />
+              {form.formState.errors.password && (
+                <p className="text-sm text-destructive mt-1">{form.formState.errors.password.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-apple-text-secondary">
+                Confirm Password
+              </label>
+              <input
+                placeholder="Password"
+                type="password"
+                className="flex h-11 w-full rounded-xl border border-apple-glass-border/50 bg-apple-glass-bg/70 backdrop-blur-sm px-3.5 py-2.5 text-sm text-apple-text-primary placeholder:text-apple-text-tertiary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-apple-accent/40 focus-visible:border-apple-accent/50 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
+                {...form.register("confirm_password")}
+              />
+              {form.formState.errors.confirm_password && (
+                <p className="text-sm text-destructive mt-1">{form.formState.errors.confirm_password.message}</p>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                className="rounded border-apple-glass-border/50 bg-apple-glass-bg/70 w-4 h-4"
+                checked={form.watch("is_superuser")}
+                onChange={(e) => form.setValue("is_superuser", e.target.checked)}
+              />
+              <label className="text-sm font-medium text-apple-text-secondary">
+                Is superuser?
+              </label>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                className="rounded border-apple-glass-border/50 bg-apple-glass-bg/70 w-4 h-4"
+                checked={form.watch("is_active")}
+                onChange={(e) => form.setValue("is_active", e.target.checked)}
+              />
+              <label className="text-sm font-medium text-apple-text-secondary">
+                Is active?
+              </label>
+            </div>
+          </div>
+
+          <AppleDialogFooter>
+            <AppleDialogClose asChild>
+              <AppleButton variant="outline" disabled={mutation.isPending}>
+                Cancel
+              </AppleButton>
+            </AppleDialogClose>
+            <LoadingButton type="submit" loading={mutation.isPending}>
+              Save
+            </LoadingButton>
+          </AppleDialogFooter>
+        </form>
+      </AppleDialogContent>
+    </AppleDialog>
   )
 }
 

@@ -7,8 +7,10 @@ import {
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
-import type { Body_login_login_access_token as AccessToken } from "@/client"
-import { AuthLayout } from "@/components/Common/AuthLayout"
+import { AppleAuthLayout } from "@/components/ui/AppleAuthLayout"
+import { AppleInput } from "@/components/ui/AppleInput"
+import { ApplePasswordInput } from "@/components/ui/apple/ApplePasswordInput"
+import { AppleLoadingButton } from "@/components/ui/apple/AppleLoadingButton"
 import {
   Form,
   FormControl,
@@ -17,9 +19,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { LoadingButton } from "@/components/ui/loading-button"
-import { PasswordInput } from "@/components/ui/password-input"
 import useAuth, { isLoggedIn } from "@/hooks/useAuth"
 
 const formSchema = z.object({
@@ -30,6 +29,7 @@ const formSchema = z.object({
     .min(8, { message: "Password must be at least 8 characters" }),
 }) satisfies z.ZodType<AccessToken>
 
+type AccessToken = Record<string, unknown>
 type FormData = z.infer<typeof formSchema>
 
 export const Route = createFileRoute("/login")({
@@ -44,7 +44,7 @@ export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
       {
-        title: "Log In - FastAPI Template",
+        title: "Log In - JEVS",
       },
     ],
   }),
@@ -68,14 +68,19 @@ function Login() {
   }
 
   return (
-    <AuthLayout>
+    <AppleAuthLayout>
       <Form {...form}>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
-          className="flex flex-col gap-6"
+          className="flex flex-col gap-5"
         >
-          <div className="flex flex-col items-center gap-2 text-center">
-            <h1 className="text-2xl font-bold">Login to your account</h1>
+          <div className="flex flex-col items-center gap-1.5 text-center">
+            <h1 className="text-2xl font-semibold tracking-tight text-apple-text-primary">
+              Log in
+            </h1>
+            <p className="text-sm text-apple-text-secondary">
+              Judicial Evidence Visualization System
+            </p>
           </div>
 
           <div className="grid gap-4">
@@ -84,9 +89,9 @@ function Login() {
               name="username"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel className="text-apple-text-secondary">Email</FormLabel>
                   <FormControl>
-                    <Input
+                    <AppleInput
                       data-testid="email-input"
                       placeholder="user@example.com"
                       type="email"
@@ -103,17 +108,17 @@ function Login() {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <div className="flex items-center">
-                    <FormLabel>Password</FormLabel>
+                  <div className="flex items-center justify-between">
+                    <FormLabel className="text-apple-text-secondary">Password</FormLabel>
                     <RouterLink
                       to="/recover-password"
-                      className="ml-auto text-sm underline-offset-4 hover:underline"
+                      className="text-xs text-apple-accent hover:underline underline-offset-4"
                     >
                       Forgot your password?
                     </RouterLink>
                   </div>
                   <FormControl>
-                    <PasswordInput
+                    <ApplePasswordInput
                       data-testid="password-input"
                       placeholder="Password"
                       {...field}
@@ -124,19 +129,19 @@ function Login() {
               )}
             />
 
-            <LoadingButton type="submit" loading={loginMutation.isPending}>
+            <AppleLoadingButton type="submit" loading={loginMutation.isPending}>
               Log In
-            </LoadingButton>
+            </AppleLoadingButton>
           </div>
 
-          <div className="text-center text-sm">
-            Don't have an account yet?{" "}
-            <RouterLink to="/signup" className="underline underline-offset-4">
+          <div className="text-center text-sm text-apple-text-secondary">
+            Don&apos;t have an account yet?{" "}
+            <RouterLink to="/signup" className="text-apple-accent hover:underline underline-offset-4">
               Sign up
             </RouterLink>
           </div>
         </form>
       </Form>
-    </AuthLayout>
+    </AppleAuthLayout>
   )
 }

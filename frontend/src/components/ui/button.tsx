@@ -9,7 +9,7 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        default: "bg-gradient-to-r from-apple-accent-start to-apple-accent-end text-white shadow-[0_2px_12px_var(--apple-accent-glow)] hover:from-apple-accent-hover-start hover:to-apple-accent-hover-end hover:shadow-[0_4px_20px_var(--apple-accent-glow-start),0_2px_10px_var(--apple-accent-glow-end)]",
         destructive:
           "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
         outline:

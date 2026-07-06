@@ -2,6 +2,77 @@
 
 const API_PREFIX = "/api/v1"
 
+// ==============================================================================
+// 全局模型配置（与 Dashboard 共享，以 localStorage 为持久化层）
+// ==============================================================================
+
+const MODEL_KEY = "jevs-models"
+const API_KEY_PREFIX = "jevs-apikey-"
+
+export interface ModelsConfig {
+  text: string
+  image: string
+}
+
+export const DEFAULT_MODEL_CONFIG: ModelsConfig = { text: "deepseek", image: "agnes" }
+
+export function loadModelConfig(): ModelsConfig {
+  try {
+    const raw = localStorage.getItem(MODEL_KEY)
+    if (raw) return JSON.parse(raw) as ModelsConfig
+  } catch {}
+  return { ...DEFAULT_MODEL_CONFIG }
+}
+
+export function saveModelConfig(config: ModelsConfig) {
+  localStorage.setItem(MODEL_KEY, JSON.stringify(config))
+}
+
+export function getGlobalImageModel(): string {
+  return loadModelConfig().image
+}
+
+export function getGlobalTextModel(): string {
+  return loadModelConfig().text
+}
+
+export function getApiKey(modelType: string): string {
+  return localStorage.getItem(`${API_KEY_PREFIX}${modelType}`) || ""
+}
+
+export function saveApiKey(modelType: string, key: string) {
+  if (key) {
+    localStorage.setItem(`${API_KEY_PREFIX}${modelType}`, key)
+  } else {
+    localStorage.removeItem(`${API_KEY_PREFIX}${modelType}`)
+  }
+}
+
+function getApiKeys(): Record<string, string> {
+  const keys: Record<string, string> = {}
+
+  const textModels = ["deepseek", "openai", "agnes"]
+  for (const m of textModels) {
+    const k = getApiKey(m)
+    if (k) {
+      if (m === "agnes") keys["agnes_text"] = k
+      else keys[m] = k
+    }
+  }
+
+  const imageModels = ["dalle", "zenmux", "agnes", "flux", "hunyuan_secret_id", "hunyuan_secret_key"]
+  for (const m of imageModels) {
+    const k = getApiKey(m)
+    if (k) {
+      if (m === "agnes") keys["agnes_image"] = k
+      else if (m === "zenmux") keys["zenmux_api_key"] = k
+      else keys[m] = k
+    }
+  }
+
+  return keys
+}
+
 function getToken(): string | null {
   if (typeof localStorage === "undefined") return null
   return localStorage.getItem("access_token")
@@ -68,11 +139,17 @@ export const jevx = {
 
   /** POST /cases/{id}/extract — 触发证据提取 */
   extractEvidence(caseId: number) {
+    const apiKeys = getApiKeys()
+    const modelConfig = loadModelConfig()
     return request<{
       case: unknown
       extraction_result: unknown
       stored_evidence: { extractable: unknown[]; uncertain: unknown[] }
-    }>(`/cases/${caseId}/extract`, { method: "POST" })
+      used_llm: boolean
+    }>(`/cases/${caseId}/extract`, { 
+      method: "POST",
+      body: JSON.stringify({ api_keys: apiKeys, model_type: modelConfig.text }),
+    })
   },
 
   /** GET /cases/{id}/evidence — 获取证据列表 */
@@ -137,6 +214,7 @@ export const jevx = {
       style?: string;
     },
   ) {
+    const apiKeys = getApiKeys()
     return request<{
       image: {
         id: number
@@ -152,12 +230,13 @@ export const jevx = {
       warning: { should_warn: boolean; message: string; item_count: number; threshold: number } | null
     }>(`/cases/${caseId}/generate-images`, {
       method: "POST",
-      body: JSON.stringify(data),
+      body: JSON.stringify({ ...data, api_keys: apiKeys }),
     })
   },
 
   /** POST /cases/{id}/generate-all-scenes — 串行批量生成所有场景图 */
   generateAllScenes(caseId: number, data: { provider: string }) {
+    const apiKeys = getApiKeys()
     return request<{
       total_scenes: number
       generated: number
@@ -173,7 +252,7 @@ export const jevx = {
       errors: Array<{ scene: string; error: string }>
     }>(`/cases/${caseId}/generate-all-scenes`, {
       method: "POST",
-      body: JSON.stringify(data),
+      body: JSON.stringify({ ...data, api_keys: apiKeys }),
     })
   },
 
@@ -185,7 +264,11 @@ export const jevx = {
       document_render: string;
     };
     provider?: string;
+    crop_position?: { x: number; y: number };
+    /** 用户自定义的细节描述，会加入 AI prompt（如"刀刃上有明显血迹"） */
+    custom_details?: string;
   }) {
+    const apiKeys = getApiKeys()
     return request<{
       id: number
       case_id: number
@@ -200,7 +283,36 @@ export const jevx = {
       scene_image_used: string | null
     }>(`/evidence/${evidenceId}/generate-closeup`, {
       method: "POST",
-      body: JSON.stringify(data),
+      body: JSON.stringify({ ...data, api_keys: apiKeys }),
+    })
+  },
+
+  /** POST /evidence/{id}/generate-injury-closeup — 生成 AI 伤情特写 */
+  generateInjuryCloseup(evidenceId: number, data: {
+    body_part: string;
+    injury_description: string;
+    gender?: string;
+    provider_config?: {
+      scene_overview: string;
+      evidence_closeup: string;
+      document_render: string;
+    };
+  }) {
+    const apiKeys = getApiKeys()
+    return request<{
+      id: number
+      case_id: number
+      scene_id: number | null
+      image_type: string
+      image_path: string
+      provider: string
+      created_at: string | null
+      body_part: string
+      injury_description: string
+      gender?: string
+    }>(`/evidence/${evidenceId}/generate-injury-closeup`, {
+      method: "POST",
+      body: JSON.stringify({ ...data, api_keys: apiKeys }),
     })
   },
 
@@ -255,6 +367,16 @@ export const jevx = {
     return request(`/scenes/${sceneId}`, { method: "DELETE" })
   },
 
+  /** DELETE /cases/{id} — 删除案件 */
+  deleteCase(caseId: number) {
+    return request(`/cases/${caseId}`, { method: "DELETE" })
+  },
+
+  /** DELETE /images/{id} — 删除生成图片 */
+  deleteImage(imageId: number) {
+    return request(`/images/${imageId}`, { method: "DELETE" })
+  },
+
   /** PATCH /cases/{id}/scenes/reorder — 重新排序场景 */
   reorderScenes(caseId: number, sceneIds: number[]) {
     return request(`/cases/${caseId}/scenes/reorder`, {
@@ -280,11 +402,12 @@ export const jevx = {
   renderDocument(
     evidenceId: number,
     data: {
-      evidence_id: number
       template_type: string
       title?: string
       text_content?: string
       document_date?: string
+      seal_text?: string
+      seal_sub_text?: string
       messages?: Array<{ sender: string; text: string; time: string }>
     },
   ) {

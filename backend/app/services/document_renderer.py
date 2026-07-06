@@ -8,7 +8,7 @@
 
 from __future__ import annotations
 
-import io
+import math
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -75,40 +75,95 @@ def load_chinese_font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont |
 # ==============================================================================
 
 
-def wrap_chinese_text(text: str, max_chars_per_line: int) -> list[str]:
+def _measure_text_width(font: ImageFont.ImageFont, text: str) -> int:
+    """测量文本的渲染宽度（返回像素）。
+
+    优先使用 font.getlength()（Pillow 9.2+，更精确），
+    回退到 font.getbbox()。
+    """
+    if not text:
+        return 0
+    try:
+        return int(font.getlength(text) + 0.5)
+    except AttributeError:
+        bbox = font.getbbox(text)
+        if bbox is None:
+            return 0
+        return bbox[2] - bbox[0]
+
+
+def wrap_chinese_text(
+    text: str,
+    max_chars_per_line: int,
+    font: ImageFont.ImageFont | None = None,
+    max_pixel_width: int | None = None,
+    safety_margin: int = 6,
+) -> list[str]:
     """中文文本自动换行。
 
-    按 max_chars_per_line 切割，遇到换行符也换行。
+    支持两种模式：
+    1. 字符数模式（max_chars_per_line）：按字符数切割
+    2. 像素模式（max_pixel_width）：按实际渲染宽度切割（推荐，更精确）
+
+    优先使用像素模式（如果提供了 font 和 max_pixel_width），
+    否则退回到字符数模式。
+
+    换行策略：加字符前先判断，若加入后会超过宽度则先换行再加，
+    确保每行的实际渲染宽度永远不超过上限（含安全边距）。
 
     Args:
         text: 待换行的文本。
-        max_chars_per_line: 每行最大中文字符数。
+        max_chars_per_line: 每行最大中文字符数（字符数模式时使用）。
+        font: 字体对象（像素模式时需要）。
+        max_pixel_width: 每行最大像素宽度（像素模式时使用）。
+        safety_margin: 像素模式的安全边距（像素），避免字体渲染误差导致溢出。
 
     Returns:
         list[str]: 换行后的行列表。
     """
     lines: list[str] = []
+
+    use_pixel_mode = font is not None and max_pixel_width is not None
+    # 减去安全边距，确保文字不会贴边
+    effective_pixel_width = (max_pixel_width or 0) - safety_margin if use_pixel_mode else 0
+
     for paragraph in text.split("\n"):
         if not paragraph.strip():
             lines.append("")
             continue
         current = ""
-        char_count = 0
+        char_count = 0.0
         for ch in paragraph:
-            if ch in "\r":
+            if ch == "\r":
                 continue
-            current += ch
+
             # 中文字符和全角符号计为 1，ASCII 字母数字计为 0.5
-            if ord(ch) > 127:
-                char_count += 1
+            ch_width = 1.0 if ord(ch) > 127 else 0.5
+
+            should_break_before = False
+            if use_pixel_mode:
+                # 像素模式：先预测加入这个字符后的宽度
+                test_text = current + ch
+                text_w = _measure_text_width(font, test_text)
+                # 如果加入后超过了，且当前行不为空，则先换行再加
+                if text_w > effective_pixel_width and current:
+                    should_break_before = True
             else:
-                char_count += 0.5
-            if char_count >= max_chars_per_line:
+                # 字符数模式：如果加入后超过限制且当前行不为空，则先换行再加
+                if char_count + ch_width > max_chars_per_line and current:
+                    should_break_before = True
+
+            if should_break_before:
                 lines.append(current)
                 current = ""
-                char_count = 0
+                char_count = 0.0
+
+            current += ch
+            char_count += ch_width
+
         if current:
             lines.append(current)
+
     return lines
 
 
@@ -203,10 +258,122 @@ def render_grid_paper(
 # ==============================================================================
 
 
+def _draw_arc_text(
+    image: Image.Image,
+    cx: float,
+    cy: float,
+    r: float,
+    text: str,
+    font_size: int,
+    color: tuple[int, int, int],
+    start_angle: float,
+    end_angle: float,
+) -> None:
+    """沿圆弧放置文字，每个字符旋转至与圆相切。
+
+    PIL 屏幕角度约定：0°=右侧，顺时针增加，270°=顶部。
+    圆弧从 start_angle 逆时针走到 end_angle（经过顶部 270°）。
+    """
+    font = load_chinese_font(font_size, bold=True)
+    n = len(text)
+    if n < 1:
+        return
+
+    span = (end_angle - start_angle) % 360
+    if span == 0:
+        span = 360
+    step = span / (n - 1) if n > 1 else 0
+
+    for i, char in enumerate(text):
+        a = (start_angle + i * step) % 360
+        rad = math.radians(a)
+        px = cx + r * math.cos(rad)
+        py = cy + r * math.sin(rad)
+
+        # 文字旋转：字脚朝向圆心，PIL rotate(+) 逆时针
+        rotation = 270 - a
+
+        bbox = font.getbbox(char)
+        char_w = bbox[2] - bbox[0]
+        char_h = bbox[3] - bbox[1]
+        pad = 4
+        char_img = Image.new("RGBA", (char_w + pad * 2, char_h + pad * 2), (0, 0, 0, 0))
+        cd = ImageDraw.Draw(char_img)
+        cd.text((pad - bbox[0], pad - bbox[1]), char, fill=color, font=font)
+
+        rotated = char_img.rotate(rotation, expand=False, resample=Image.BICUBIC)
+        image.paste(
+            rotated,
+            (int(px - rotated.width / 2), int(py - rotated.height / 2)),
+            rotated,
+        )
+
+
+def _draw_circular_seal(
+    image: Image.Image,
+    cx: float,
+    cy: float,
+    radius: float,
+    org_name: str,
+    sub_text: str = "",
+) -> None:
+    """绘制中国式圆形红色公章。"""
+    seal_color = (200, 30, 30)
+    draw = ImageDraw.Draw(image)
+
+    # 外圈（粗）
+    draw.ellipse(
+        [cx - radius, cy - radius, cx + radius, cy + radius],
+        outline=seal_color,
+        width=5,
+    )
+    # 内圈（细）
+    inner_r = radius - 9
+    draw.ellipse(
+        [cx - inner_r, cy - inner_r, cx + inner_r, cy + inner_r],
+        outline=seal_color,
+        width=1,
+    )
+
+    # 顶部弧形文字（机构名称）
+    if org_name:
+        _draw_arc_text(
+            image, cx, cy, inner_r - 8, org_name,
+            font_size=16, color=seal_color,
+            start_angle=198, end_angle=342,
+        )
+
+    # 中央五角星
+    star_r = 16
+    star_points: list[tuple[int, int]] = []
+    for j in range(5):
+        outer_a = math.radians(-90 + j * 72)        # 顶点
+        inner_a = math.radians(-90 + 36 + j * 72)   # 凹点
+        star_points.append((int(cx + star_r * math.cos(outer_a)),
+                            int(cy + star_r * math.sin(outer_a))))
+        star_points.append((int(cx + star_r * 0.38 * math.cos(inner_a)),
+                            int(cy + star_r * 0.38 * math.sin(inner_a))))
+    draw.polygon(star_points, fill=seal_color)
+
+    # 副文字（专用章等）在星下方
+    if sub_text:
+        font_sub = load_chinese_font(13)
+        bbox = draw.textbbox((0, 0), sub_text, font=font_sub)
+        tw = bbox[2] - bbox[0]
+        draw.text(
+            (cx - tw / 2, cy + star_r + 4),
+            sub_text,
+            fill=seal_color,
+            font=font_sub,
+        )
+
+
 def render_a4_document(
     text: str,
     title: str = "",
     document_date: str = "",
+    seal_text: str = "",
+    seal_sub_text: str = "",
     output_path: str | None = None,
 ) -> str:
     """渲染正式 A4 打印风格书证。
@@ -215,6 +382,8 @@ def render_a4_document(
         text: 书证文本内容。
         title: 居中标题。
         document_date: 日期文本（如 "2024年3月15日"）。
+        seal_text: 印章文字第一行（为空时显示"（印章）"）。
+        seal_sub_text: 印章文字第二行（为空时不显示）。
         output_path: 输出路径，为 None 则自动生成。
 
     Returns:
@@ -230,7 +399,6 @@ def render_a4_document(
     font_title = load_chinese_font(20, bold=True)
     font_body = load_chinese_font(14)
     font_date = load_chinese_font(12)
-    font_seal = load_chinese_font(13)
 
     content_width = width - margin_left - margin_right
     y = margin_top
@@ -264,25 +432,12 @@ def render_a4_document(
             font=font_date,
         )
 
-    # --- 底部红色印章占位框 ---
-    seal_size = 100
-    seal_x = width - margin_right - seal_size
-    seal_y = height - margin_bottom - seal_size - 20
-    draw.rectangle(
-        [seal_x, seal_y, seal_x + seal_size, seal_y + seal_size],
-        outline=(180, 40, 40),
-        width=2,
-    )
-    seal_text = "（印章）"
-    sbbox = draw.textbbox((0, 0), seal_text, font=font_seal)
-    sw = sbbox[2] - sbbox[0]
-    sh = sbbox[3] - sbbox[1]
-    draw.text(
-        (seal_x + (seal_size - sw) / 2, seal_y + (seal_size - sh) / 2),
-        seal_text,
-        fill=(180, 40, 40),
-        font=font_seal,
-    )
+    # --- 底部红色印章（圆形公章风格） ---
+    seal_radius = 65
+    seal_cx = width - margin_right - seal_radius - 10
+    seal_cy = height - margin_bottom - seal_radius - 5
+    seal_text_line1 = seal_text if seal_text else "（印章）"
+    _draw_circular_seal(img, seal_cx, seal_cy, seal_radius, seal_text_line1, seal_sub_text)
 
     # --- 保存 ---
     if output_path is None:
@@ -324,10 +479,16 @@ def render_chat_screenshot(
     Returns:
         str: 图片保存的绝对路径。
     """
-    phone_width = 390  # iPhone 14 宽度
+    phone_width = 420  # 略宽于 iPhone 14，避免衬线体换行过多
     nav_height = 80
     padding = 15
-    bubble_max_width = int(phone_width * 0.65)
+    bubble_max_width = int(phone_width * 0.72)
+    # 气泡内文字可用像素宽度（气泡最大宽 - 左右内边距）
+    bubble_text_max_pixel = bubble_max_width - 24
+    # 实际用于换行判断的像素宽度
+    # 容器里实际是 Noto Serif CJK 衬线体，字宽较大且与 getlength() 可能有差异
+    # 大量扣除：20px = 8px 安全边距 + 12px 字距/字形误差
+    effective_wrap_width = bubble_text_max_pixel - 20
 
     font_nav = load_chinese_font(16, bold=True)
     font_msg = load_chinese_font(15)
@@ -338,12 +499,17 @@ def render_chat_screenshot(
     msg_color_right = (149, 236, 105)     # 本人绿色气泡
     bg_color = (237, 237, 237)            # 微信背景
 
-    # --- 预计算内容高度 ---
+    # --- 预计算内容高度（按像素宽度换行）---
     content_y = nav_height + padding
     y = content_y
 
     for msg in messages:
-        wrapped = wrap_chinese_text(msg["text"], 18)
+        wrapped = wrap_chinese_text(
+            msg["text"],
+            max_chars_per_line=18,
+            font=font_msg,
+            max_pixel_width=effective_wrap_width,
+        )
         bubble_h = len(wrapped) * 24 + 20
         y += bubble_h + 20  # 气泡 + 间距 + 时间戳行 + 间距
         # 时间戳行
@@ -376,40 +542,71 @@ def render_chat_screenshot(
 
         is_left = (sender != "B")  # 非 B 即为左侧（对方）
 
-        wrapped = wrap_chinese_text(text, 18)
+        # 按像素宽度换行（关键修复：避免文字超出气泡）
+        wrapped = wrap_chinese_text(
+            text,
+            max_chars_per_line=18,
+            font=font_msg,
+            max_pixel_width=effective_wrap_width,
+        )
         bubble_h = len(wrapped) * 24 + 20
         bubble_color = msg_color_left if is_left else msg_color_right
+
+        # 气泡宽度（按实际渲染像素计算，确保能容纳文字）
+        bubble_w = 0
+        for l in wrapped:
+            bw = _measure_text_width(font_msg, l)
+            bubble_w = max(bubble_w, bw)
+        bubble_w += 24  # 左右内边距各 12
+        # 不再 min 截断，因为换行后文字宽度已严格 < effective_wrap_width
+        # bubble_w 最大约为 effective_wrap_width + 24 ≈ 241px
+        bubble_w = min(bubble_w, bubble_max_width)
 
         if is_left:
             bubble_x = padding
             sender_x = padding + 10
         else:
-            bubble_w = min(
-                max((draw.textbbox((0, 0), l, font=font_msg)[2] for l in wrapped)) + 24,
-                bubble_max_width,
-            )
-            actual_w = 0
-            for l in wrapped:
-                bw = draw.textbbox((0, 0), l, font=font_msg)[2] - draw.textbbox((0, 0), l, font=font_msg)[0]
-                actual_w = max(actual_w, bw)
-            actual_w += 24
-            bubble_x = phone_width - padding - actual_w
+            bubble_x = phone_width - padding - bubble_w
             sender_x = phone_width - padding - 10
 
-        # 发送者标签
+        # 发送者标签（确保不超出画布边界）
         sender_label = msg.get("sender_name", "")
         if not sender_label:
             sender_label = "对方" if is_left else "本人"
-        draw.text((sender_x, y - 2), sender_label, fill=(150, 150, 150), font=font_sender)
+
+        # 计算标签最大可用宽度
+        if is_left:
+            # 左侧：左对齐，最多占气泡宽度的 80%，但不超过左边界 + 气泡宽 - 气泡内padding
+            max_label_w = bubble_w - 20
+        else:
+            # 右侧：右对齐，最多占气泡宽度的 80%
+            max_label_w = bubble_w - 20
+
+        # 截断过长的发送者名称
+        label_w = _measure_text_width(font_sender, sender_label)
+        if label_w > max_label_w:
+            # 逐步截断直到符合宽度（预添加"…"）
+            truncated = sender_label
+            while True:
+                truncated = truncated[:-1]
+                test_label = truncated + "…"
+                test_w = _measure_text_width(font_sender, test_label)
+                if test_w <= max_label_w or len(truncated) <= 1:
+                    sender_label = test_label
+                    label_w = test_w
+                    break
+
+        # 定位标签（与气泡对齐，而不是画布边缘）
+        if is_left:
+            # 左侧：与气泡左边缘对齐（略右一点）
+            label_x = bubble_x + 12
+        else:
+            # 右侧：右对齐，标签右边 = 气泡右边 - 12
+            label_x = bubble_x + bubble_w - 12 - label_w
+
+        draw.text((label_x, y - 2), sender_label, fill=(150, 150, 150), font=font_sender)
 
         y += 18
-
-        # 气泡背景（圆角用矩形近似）
-        bubble_w = 0
-        for l in wrapped:
-            bw = draw.textbbox((0, 0), l, font=font_msg)[2] - draw.textbbox((0, 0), l, font=font_msg)[0]
-            bubble_w = max(bubble_w, bw)
-        bubble_w += 24
 
         # 圆角效果：画圆角矩形
         radius = 12

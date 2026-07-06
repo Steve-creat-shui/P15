@@ -12,30 +12,23 @@ import {
 } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { AppleBadge } from "@/components/ui/apple/AppleBadge"
+import { AppleButton } from "@/components/ui/AppleButton"
+import { GlassCard } from "@/components/ui/GlassCard"
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+  AppleDialog,
+  AppleDialogContent,
+  AppleDialogFooter,
+  AppleDialogHeader,
+  AppleDialogTitle,
+} from "@/components/ui/apple/AppleDialog"
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+  AppleSelect,
+  AppleSelectContent,
+  AppleSelectItem,
+  AppleSelectTrigger,
+  AppleSelectValue,
+} from "@/components/ui/apple/AppleSelect"
 import { jevx } from "@/lib/jevx"
 
 // ==============================================================================
@@ -93,7 +86,7 @@ export const Route = createFileRoute("/_layout/cases/$caseId/scenes")({
 function SceneManagement() {
   const { caseId } = useParams({ from: "/_layout/cases/$caseId/scenes" })
   const [caseTitle, setCaseTitle] = useState("")
-  const [caseStatus, setCaseStatus] = useState("")
+  // const [caseStatus, setCaseStatus] = useState("")
   const [styleDescription, setStyleDescription] = useState("")
   const [savingStyle, setSavingStyle] = useState(false)
   const [scenes, setScenes] = useState<SceneData[]>([])
@@ -125,7 +118,7 @@ function SceneManagement() {
       const current = projects.find((p) => p.id === Number(caseId))
       if (current) {
         setCaseTitle(current.title)
-        setCaseStatus(current.status)
+        // setCaseStatus(current.status)
         setStyleDescription(current.style_description || "")
       }
     } catch (err) {
@@ -250,7 +243,7 @@ function SceneManagement() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <Loader2 className="h-8 w-8 animate-spin text-apple-text-secondary" />
       </div>
     )
   }
@@ -258,70 +251,66 @@ function SceneManagement() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Link to="/cases" className="hover:text-foreground">
+      <div className="flex items-center gap-2 text-sm text-apple-text-secondary">
+        <Link to="/cases" className="hover:text-apple-text-primary">
           案件列表
         </Link>
         <ChevronLeft className="h-3 w-3 rotate-180" />
         <Link
           to="/cases/$caseId/evidence"
           params={{ caseId }}
-          className="hover:text-foreground"
+          className="hover:text-apple-text-primary"
         >
           {caseTitle}
         </Link>
         <ChevronLeft className="h-3 w-3 rotate-180" />
-        <span className="text-foreground">场景管理</span>
+        <span className="text-apple-text-primary">场景管理</span>
       </div>
 
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Layers className="h-8 w-8 text-primary" />
+          <Layers className="h-8 w-8 text-apple-accent" />
           <div>
             <h1 className="text-2xl font-bold tracking-tight">场景管理</h1>
-            <p className="text-muted-foreground">
+            <p className="text-apple-text-secondary">
               创建和管理案件的多个场景，将证据分配到对应场景
             </p>
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleSuggest} disabled={suggesting}>
+          <AppleButton variant="outline" onClick={handleSuggest} disabled={suggesting}>
             <Sparkles className="mr-2 h-4 w-4" />
-            {suggesting ? "分析中..." : "🤖 自动建议场景"}
-          </Button>
+            {suggesting ? "分析中..." : "自动建议场景"}
+          </AppleButton>
         </div>
       </div>
 
       {error && (
-        <div className="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        <div className="rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
           {error}
-          <Button
-            variant="link"
-            size="sm"
-            className="ml-2 h-auto p-0"
+          <button
             onClick={() => setError("")}
+            className="text-xs text-apple-accent hover:underline underline-offset-4 p-0 h-auto ml-2"
           >
             关闭
-          </Button>
+          </button>
         </div>
       )}
 
       {/* Case Style Description Card */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
-            🎨 环境/装修风格描述
-            <Badge variant="secondary" className="text-xs font-normal">跨场景共享</Badge>
-          </CardTitle>
-          <p className="text-xs text-muted-foreground">
+      <GlassCard>
+        <div className="p-6 space-y-2">
+          <div className="text-base font-semibold text-apple-text-primary flex items-center gap-2">
+            环境/装修风格描述
+            <AppleBadge variant="secondary" className="text-xs font-normal">跨场景共享</AppleBadge>
+          </div>
+          <p className="text-xs text-apple-text-secondary">
             描述这起案件发生的整体环境（如公寓装修、地板颜色、家具风格）。
             设置后将自动注入到所有场景和特写图中，确保背景风格一致。
           </p>
-        </CardHeader>
-        <CardContent>
           <textarea
-            className="w-full min-h-[80px] rounded-md border px-3 py-2 text-sm resize-y"
+            className="w-full min-h-[80px] rounded-xl border border-apple-glass-border/50 bg-apple-glass-bg/70 backdrop-blur-sm px-3 py-2 text-sm resize-y text-apple-text-primary placeholder:text-apple-text-tertiary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-apple-accent/40 focus-visible:border-apple-accent/50 transition-all duration-200"
             placeholder="例如：一栋老式居民楼的公寓单元，浅橡木地板，白色墙面，灰色布艺沙发，简约装修风格，楼层走廊铺白色地砖"
             value={styleDescription}
             onChange={(e) => setStyleDescription(e.target.value)}
@@ -341,13 +330,11 @@ function SceneManagement() {
             }}
           />
           <div className="mt-1.5 flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-apple-text-secondary">
               {savingStyle ? "保存中..." : "失焦自动保存 · 留空则不启用"}
             </p>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 text-xs"
+            <button
+              className="h-7 text-xs text-apple-text-tertiary hover:text-apple-text-secondary hover:bg-apple-glass-bg-hover/60 transition-colors px-2"
               disabled={!styleDescription}
               onClick={async () => {
                 setSavingStyle(true)
@@ -364,17 +351,18 @@ function SceneManagement() {
               }}
             >
               清除
-            </Button>
+            </button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </GlassCard>
 
       {/* Manual add form */}
-      <Card className="border-dashed">
-        <CardContent className="flex items-end gap-3 py-4">
+      <GlassCard className="border-dashed">
+        <div className="flex items-end gap-3 py-4 px-6">
           <div className="flex-1 space-y-1.5">
-            <Label className="text-xs">场景名称</Label>
-            <Input
+            <label className="text-xs font-medium text-apple-text-secondary">场景名称</label>
+            <input
+              className="flex h-9 w-full rounded-xl border border-apple-glass-border/50 bg-apple-glass-bg/70 backdrop-blur-sm px-3 py-2 text-sm text-apple-text-primary placeholder:text-apple-text-tertiary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-apple-accent/40 focus-visible:border-apple-accent/50 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
               placeholder="如：卧室、接待室"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
@@ -383,44 +371,44 @@ function SceneManagement() {
             />
           </div>
           <div className="w-44 space-y-1.5">
-            <Label className="text-xs">房间类型</Label>
-            <Select value={newRoomType} onValueChange={setNewRoomType}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
+            <label className="text-xs font-medium text-apple-text-secondary">房间类型</label>
+            <AppleSelect value={newRoomType} onValueChange={setNewRoomType}>
+              <AppleSelectTrigger>
+                <AppleSelectValue />
+              </AppleSelectTrigger>
+              <AppleSelectContent>
                 {ROOM_TYPE_OPTIONS.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>
+                  <AppleSelectItem key={o.value} value={o.value}>
                     {o.label}
-                  </SelectItem>
+                  </AppleSelectItem>
                 ))}
-              </SelectContent>
-            </Select>
+              </AppleSelectContent>
+            </AppleSelect>
           </div>
-          <Button onClick={handleAdd} disabled={adding || !newName.trim()}>
+          <AppleButton onClick={handleAdd} disabled={adding || !newName.trim()}>
             <Plus className="mr-1 h-4 w-4" />
             添加
-          </Button>
-        </CardContent>
-      </Card>
+          </AppleButton>
+        </div>
+      </GlassCard>
 
       {/* Scene list */}
       {scenes.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center gap-4 py-16">
-            <Layers className="h-12 w-12 text-muted-foreground/40" />
-            <p className="text-muted-foreground">暂无场景，请使用自动建议或手动添加</p>
-          </CardContent>
-        </Card>
+        <GlassCard className="border-dashed">
+          <div className="flex flex-col items-center gap-4 py-16">
+            <Layers className="h-12 w-12 text-apple-text-secondary/40" />
+            <p className="text-apple-text-secondary">暂无场景，请使用自动建议或手动添加</p>
+          </div>
+        </GlassCard>
       ) : (
         <div className="space-y-3">
           {scenes.map((scene, idx) => (
-            <Card key={scene.id}>
-              <CardContent className="flex items-center gap-4 py-4">
+            <GlassCard key={scene.id}>
+              <div className="flex items-center gap-4 py-4 px-6">
                 {/* Name (inline editable) */}
                 <div className="flex-1 min-w-0 space-y-1.5">
-                  <Input
-                    className="text-base font-semibold h-9 border-transparent bg-transparent px-0 focus-visible:border-input focus-visible:bg-background"
+                  <input
+                    className="flex h-9 w-full rounded-xl border border-apple-glass-border/50 bg-apple-glass-bg/70 backdrop-blur-sm px-3 py-2 text-sm text-apple-text-primary placeholder:text-apple-text-tertiary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-apple-accent/40 focus-visible:border-apple-accent/50 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 border-transparent bg-transparent px-0 focus-visible:border-apple-accent/50 focus-visible:bg-apple-glass-bg/70"
                     value={scene.name}
                     onChange={(e) => {
                       setScenes((prev) =>
@@ -432,7 +420,7 @@ function SceneManagement() {
                     onBlur={(e) => handleUpdateName(scene.id, e.target.value)}
                   />
                   <div className="flex items-center gap-3">
-                    <Select
+                    <AppleSelect
                       value={scene.room_type}
                       onValueChange={(v) => {
                         setScenes((prev) =>
@@ -443,86 +431,79 @@ function SceneManagement() {
                         handleUpdateRoomType(scene.id, v)
                       }}
                     >
-                      <SelectTrigger className="h-7 w-[160px] text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
+                      <AppleSelectTrigger className="h-7 w-[160px] text-xs">
+                        <AppleSelectValue />
+                      </AppleSelectTrigger>
+                      <AppleSelectContent>
                         {ROOM_TYPE_OPTIONS.map((o) => (
-                          <SelectItem key={o.value} value={o.value}>
+                          <AppleSelectItem key={o.value} value={o.value}>
                             {o.label}
-                          </SelectItem>
+                          </AppleSelectItem>
                         ))}
-                      </SelectContent>
-                    </Select>
-                    <Badge variant="secondary" className="text-xs">
+                      </AppleSelectContent>
+                    </AppleSelect>
+                    <AppleBadge variant="secondary" className="text-xs">
                       {scene.evidence_count} 项证据
-                    </Badge>
+                    </AppleBadge>
                   </div>
                 </div>
 
                 {/* Action buttons */}
                 <div className="flex items-center gap-1 shrink-0">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
+                  <button
+                    className="h-8 w-8 p-0 text-apple-text-tertiary hover:text-apple-text-primary hover:bg-apple-glass-bg-hover/60 transition-colors"
                     disabled={idx === 0}
                     onClick={() => handleMove(idx, -1)}
                   >
                     <ArrowUp className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
+                  </button>
+                  <button
+                    className="h-8 w-8 p-0 text-apple-text-tertiary hover:text-apple-text-primary hover:bg-apple-glass-bg-hover/60 transition-colors"
                     disabled={idx === scenes.length - 1}
                     onClick={() => handleMove(idx, 1)}
                   >
                     <ArrowDown className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-destructive"
+                  </button>
+                  <button
+                    className="h-8 w-8 p-0 text-destructive hover:text-destructive/80 hover:bg-apple-glass-bg-hover/60 transition-colors"
                     onClick={() => setDeleteTarget(scene)}
                   >
                     <Trash2 className="h-4 w-4" />
-                  </Button>
+                  </button>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </GlassCard>
           ))}
         </div>
       )}
 
       {/* Bottom action */}
       <div className="flex justify-end">
-        <Button asChild>
-          <Link
-            to="/cases/$caseId/evidence"
-            params={{ caseId }}
-          >
-            下一步：分配证据到场景
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Link>
-        </Button>
+        <Link
+          to="/cases/$caseId/evidence"
+          params={{ caseId }}
+          className="inline-flex items-center justify-center font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-apple-accent/50 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98] rounded-xl select-none h-10 px-4 py-2 text-sm bg-gradient-to-r from-apple-accent-start to-apple-accent-end text-white hover:from-apple-accent-hover-start hover:to-apple-accent-hover-end shadow-[0_2px_12px_var(--apple-accent-glow)] hover:shadow-[0_4px_20px_var(--apple-accent-glow)]"
+        >
+          下一步：分配证据到场景
+          <ArrowRight className="ml-2 h-4 w-4" />
+        </Link>
       </div>
 
       {/* ---- Auto-suggest Dialog ---- */}
-      <Dialog open={suggestOpen} onOpenChange={setSuggestOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>🤖 自动建议场景</DialogTitle>
-            <p className="text-sm text-muted-foreground">
+      <AppleDialog open={suggestOpen} onOpenChange={setSuggestOpen}>
+        <AppleDialogContent className="max-w-lg">
+          <AppleDialogHeader>
+            <AppleDialogTitle>自动建议场景</AppleDialogTitle>
+            <p className="text-sm text-apple-text-secondary">
               系统根据案件文本中的关键词检测到以下场景建议，勾选需要创建的场景后点击确认。
             </p>
-          </DialogHeader>
+          </AppleDialogHeader>
 
           <div className="space-y-2 max-h-80 overflow-y-auto">
             {suggestions.map((s, i) => (
               <label
                 key={`${s.name}-${s.room_type}`}
-                className="flex items-start gap-3 rounded-md border p-3 cursor-pointer hover:bg-accent"
+                className="flex items-start gap-3 rounded-md border p-3 cursor-pointer hover:bg-apple-glass-bg-hover/60"
               >
                 <input
                   type="checkbox"
@@ -540,11 +521,11 @@ function SceneManagement() {
                 <div>
                   <div className="font-medium">
                     {s.name}{" "}
-                    <Badge variant="outline" className="ml-2 text-xs">
+                    <AppleBadge variant="outline" className="ml-2 text-xs">
                       {roomTypeLabel(s.room_type)}
-                    </Badge>
+                    </AppleBadge>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">
+                  <p className="text-xs text-apple-text-secondary mt-0.5">
                     {s.reason}
                   </p>
                 </div>
@@ -552,14 +533,14 @@ function SceneManagement() {
             ))}
           </div>
 
-          <DialogFooter>
-            <Button
+          <AppleDialogFooter>
+            <AppleButton
               variant="outline"
               onClick={() => setSuggestOpen(false)}
             >
               取消
-            </Button>
-            <Button
+            </AppleButton>
+            <AppleButton
               onClick={handleBatchCreate}
               disabled={selectedSuggestions.size === 0 || suggesting}
             >
@@ -567,37 +548,40 @@ function SceneManagement() {
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : null}
               批量创建已选场景
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </AppleButton>
+          </AppleDialogFooter>
+        </AppleDialogContent>
+      </AppleDialog>
 
       {/* ---- Delete confirm Dialog ---- */}
-      <Dialog
+      <AppleDialog
         open={deleteTarget !== null}
         onOpenChange={(v) => !v && setDeleteTarget(null)}
       >
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>确认删除场景？</DialogTitle>
-          </DialogHeader>
+        <AppleDialogContent className="max-w-sm">
+          <AppleDialogHeader>
+            <AppleDialogTitle>确认删除场景？</AppleDialogTitle>
+          </AppleDialogHeader>
           {deleteTarget && (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-apple-text-secondary">
               {deleteTarget.evidence_count > 0
                 ? `该场景「${deleteTarget.name}」下有 ${deleteTarget.evidence_count} 项证据将被解除绑定，确认删除？`
                 : `确认删除场景「${deleteTarget.name}」？`}
             </p>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+          <AppleDialogFooter>
+            <AppleButton variant="outline" onClick={() => setDeleteTarget(null)}>
               取消
-            </Button>
-            <Button variant="destructive" onClick={handleDelete}>
+            </AppleButton>
+            <button
+              className="h-10 px-4 py-2 text-sm font-medium text-white bg-destructive rounded-xl hover:bg-destructive/90 transition-colors"
+              onClick={handleDelete}
+            >
               删除
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </button>
+          </AppleDialogFooter>
+        </AppleDialogContent>
+      </AppleDialog>
     </div>
   )
 }

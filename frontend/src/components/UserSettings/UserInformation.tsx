@@ -5,17 +5,9 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 
 import { UsersService, type UserUpdateMe } from "@/client"
-import { Button } from "@/components/ui/button"
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
+import { AppleButton } from "@/components/ui/AppleButton"
 import { LoadingButton } from "@/components/ui/loading-button"
+import { GlassCard } from "@/components/ui/GlassCard"
 import useAuth from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
 import { cn } from "@/lib/utils"
@@ -81,90 +73,96 @@ const UserInformation = () => {
   }
 
   return (
-    <div className="max-w-md">
-      <h3 className="text-lg font-semibold py-4">User Information</h3>
-      <Form {...form}>
-        <form
-          onSubmit={form.handleSubmit(onSubmit)}
-          className="flex flex-col gap-4"
-        >
-          <FormField
-            control={form.control}
-            name="full_name"
-            render={({ field }) =>
-              editMode ? (
-                <FormItem>
-                  <FormLabel>Full name</FormLabel>
-                  <FormControl>
-                    <Input type="text" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              ) : (
-                <FormItem>
-                  <FormLabel>Full name</FormLabel>
-                  <p
-                    className={cn(
-                      "py-2 truncate max-w-sm",
-                      !field.value && "text-muted-foreground",
-                    )}
-                  >
-                    {field.value || "N/A"}
-                  </p>
-                </FormItem>
-              )
-            }
-          />
+    <GlassCard>
+      <h3 className="text-lg font-semibold py-4 px-6">User Information</h3>
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="flex flex-col gap-4 px-6 pb-6"
+      >
+        <div>
+          {editMode ? (
+            <>
+              <label className="text-sm font-medium text-apple-text-secondary">
+                Full name
+              </label>
+              <input
+                type="text"
+                className="flex h-11 w-full rounded-xl border border-apple-glass-border/50 bg-apple-glass-bg/70 backdrop-blur-sm px-3.5 py-2.5 text-sm text-apple-text-primary placeholder:text-apple-text-tertiary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-apple-accent/40 focus-visible:border-apple-accent/50 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
+                {...form.register("full_name")}
+              />
+              {form.formState.errors.full_name && (
+                <p className="text-sm text-destructive mt-1">{form.formState.errors.full_name.message}</p>
+              )}
+            </>
+          ) : (
+            <>
+              <label className="text-sm font-medium text-apple-text-secondary">
+                Full name
+              </label>
+              <p
+                className={cn(
+                  "py-2 truncate max-w-sm",
+                  !form.getValues("full_name") && "text-apple-text-secondary",
+                )}
+              >
+                {form.getValues("full_name") || "N/A"}
+              </p>
+            </>
+          )}
+        </div>
 
-          <FormField
-            control={form.control}
-            name="email"
-            render={({ field }) =>
-              editMode ? (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input type="email" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              ) : (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <p className="py-2 truncate max-w-sm">{field.value}</p>
-                </FormItem>
-              )
-            }
-          />
+        <div>
+          {editMode ? (
+            <>
+              <label className="text-sm font-medium text-apple-text-secondary">
+                Email
+              </label>
+              <input
+                type="email"
+                className="flex h-11 w-full rounded-xl border border-apple-glass-border/50 bg-apple-glass-bg/70 backdrop-blur-sm px-3.5 py-2.5 text-sm text-apple-text-primary placeholder:text-apple-text-tertiary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-apple-accent/40 focus-visible:border-apple-accent/50 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
+                {...form.register("email")}
+              />
+              {form.formState.errors.email && (
+                <p className="text-sm text-destructive mt-1">{form.formState.errors.email.message}</p>
+              )}
+            </>
+          ) : (
+            <>
+              <label className="text-sm font-medium text-apple-text-secondary">
+                Email
+              </label>
+              <p className="py-2 truncate max-w-sm">{form.getValues("email")}</p>
+            </>
+          )}
+        </div>
 
-          <div className="flex gap-3">
-            {editMode ? (
-              <>
-                <LoadingButton
-                  type="submit"
-                  loading={mutation.isPending}
-                  disabled={!form.formState.isDirty}
-                >
-                  Save
-                </LoadingButton>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={onCancel}
-                  disabled={mutation.isPending}
-                >
-                  Cancel
-                </Button>
-              </>
-            ) : (
-              <Button type="button" onClick={toggleEditMode}>
-                Edit
-              </Button>
-            )}
-          </div>
-        </form>
-      </Form>
-    </div>
+        <div className="flex gap-3">
+          {editMode ? (
+            <>
+              <LoadingButton
+                type="submit"
+                loading={mutation.isPending}
+                disabled={!form.formState.isDirty}
+              >
+                Save
+              </LoadingButton>
+              <AppleButton
+                type="button"
+                variant="outline"
+                onClick={onCancel}
+                disabled={mutation.isPending}
+              >
+                Cancel
+              </AppleButton>
+            </>
+          ) : (
+            <AppleButton type="button" onClick={toggleEditMode}>
+              Edit
+            </AppleButton>
+          )}
+        </div>
+      </form>
+    </GlassCard>
   )
 }
 

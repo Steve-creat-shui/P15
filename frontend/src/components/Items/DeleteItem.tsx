@@ -4,17 +4,9 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 
 import { ItemsService } from "@/client"
-import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
+import { AppleButton } from "@/components/ui/AppleButton"
+import { AppleDialog, AppleDialogClose, AppleDialogContent, AppleDialogFooter, AppleDialogHeader, AppleDialogTitle, AppleDialogDescription } from "@/components/ui/apple/AppleDialog"
+import { AppleDropdownMenuItem } from "@/components/ui/apple/AppleDropdownMenu"
 import { LoadingButton } from "@/components/ui/loading-button"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
@@ -52,31 +44,31 @@ const DeleteItem = ({ id, onSuccess }: DeleteItemProps) => {
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DropdownMenuItem
+    <AppleDialog open={isOpen} onOpenChange={setIsOpen}>
+      <AppleDropdownMenuItem
         variant="destructive"
         onSelect={(e) => e.preventDefault()}
         onClick={() => setIsOpen(true)}
       >
         <Trash2 />
         Delete Item
-      </DropdownMenuItem>
-      <DialogContent className="sm:max-w-md">
+      </AppleDropdownMenuItem>
+      <AppleDialogContent className="sm:max-w-md">
         <form onSubmit={handleSubmit(onSubmit)}>
-          <DialogHeader>
-            <DialogTitle>Delete Item</DialogTitle>
-            <DialogDescription>
+          <AppleDialogHeader>
+            <AppleDialogTitle>Delete Item</AppleDialogTitle>
+            <AppleDialogDescription>
               This item will be permanently deleted. Are you sure? You will not
               be able to undo this action.
-            </DialogDescription>
-          </DialogHeader>
+            </AppleDialogDescription>
+          </AppleDialogHeader>
 
-          <DialogFooter className="mt-4">
-            <DialogClose asChild>
-              <Button variant="outline" disabled={mutation.isPending}>
+          <AppleDialogFooter className="mt-4">
+            <AppleDialogClose asChild>
+              <AppleButton variant="outline" disabled={mutation.isPending}>
                 Cancel
-              </Button>
-            </DialogClose>
+              </AppleButton>
+            </AppleDialogClose>
             <LoadingButton
               variant="destructive"
               type="submit"
@@ -84,10 +76,10 @@ const DeleteItem = ({ id, onSuccess }: DeleteItemProps) => {
             >
               Delete
             </LoadingButton>
-          </DialogFooter>
+          </AppleDialogFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+      </AppleDialogContent>
+    </AppleDialog>
   )
 }
 

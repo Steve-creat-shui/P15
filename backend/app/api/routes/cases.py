@@ -239,17 +239,26 @@ async def get_case_report(
     current_user: CurrentUser,
     case_id: int,
     fmt: str = Query("markdown", pattern="^(markdown|html)$"),
+    evidence_ids: str | None = Query(None, description="Comma-separated evidence IDs to include"),
+    image_ids: str | None = Query(None, description="Comma-separated image IDs to include"),
 ) -> Any:
     """Render a comprehensive case analysis report.
 
     Includes case info, evidence chain analysis, scene deduction results,
     and the original raw text excerpt. Available in markdown and HTML formats.
+
+    Optionally filter by evidence_ids or image_ids (comma-separated).
     """
     db_case = crud.get_case(session=session, case_id=case_id)
     if not db_case:
         raise HTTPException(status_code=404, detail="Case not found")
 
     evidences = crud.get_evidences_by_case(session=session, case_id=case_id)
+
+    # Filter by selected evidence IDs if provided
+    if evidence_ids:
+        selected_ids = set(int(x.strip()) for x in evidence_ids.split(",") if x.strip())
+        evidences = [e for e in evidences if e.id in selected_ids]
 
     # Try to get scene state if available
     scene_snapshot = None

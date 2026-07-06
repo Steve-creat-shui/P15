@@ -10,7 +10,9 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 
 import { LoginService } from "@/client"
-import { AuthLayout } from "@/components/Common/AuthLayout"
+import { AppleAuthLayout } from "@/components/ui/AppleAuthLayout"
+import { ApplePasswordInput } from "@/components/ui/apple/ApplePasswordInput"
+import { AppleLoadingButton } from "@/components/ui/apple/AppleLoadingButton"
 import {
   Form,
   FormControl,
@@ -19,8 +21,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
-import { LoadingButton } from "@/components/ui/loading-button"
-import { PasswordInput } from "@/components/ui/password-input"
 import { isLoggedIn } from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
@@ -60,7 +60,7 @@ export const Route = createFileRoute("/reset-password")({
   head: () => ({
     meta: [
       {
-        title: "Reset Password - FastAPI Template",
+        title: "Reset Password - JEVS",
       },
     ],
   }),
@@ -97,14 +97,19 @@ function ResetPassword() {
   }
 
   return (
-    <AuthLayout>
+    <AppleAuthLayout>
       <Form {...form}>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
-          className="flex flex-col gap-6"
+          className="flex flex-col gap-5"
         >
-          <div className="flex flex-col items-center gap-2 text-center">
-            <h1 className="text-2xl font-bold">Reset Password</h1>
+          <div className="flex flex-col items-center gap-1.5 text-center">
+            <h1 className="text-2xl font-semibold tracking-tight text-apple-text-primary">
+              Reset Password
+            </h1>
+            <p className="text-sm text-apple-text-secondary">
+              Enter your new password
+            </p>
           </div>
 
           <div className="grid gap-4">
@@ -113,9 +118,9 @@ function ResetPassword() {
               name="new_password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>New Password</FormLabel>
+                  <FormLabel className="text-apple-text-secondary">New Password</FormLabel>
                   <FormControl>
-                    <PasswordInput
+                    <ApplePasswordInput
                       data-testid="new-password-input"
                       placeholder="New Password"
                       {...field}
@@ -131,9 +136,9 @@ function ResetPassword() {
               name="confirm_password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Confirm Password</FormLabel>
+                  <FormLabel className="text-apple-text-secondary">Confirm Password</FormLabel>
                   <FormControl>
-                    <PasswordInput
+                    <ApplePasswordInput
                       data-testid="confirm-password-input"
                       placeholder="Confirm Password"
                       {...field}
@@ -144,23 +149,22 @@ function ResetPassword() {
               )}
             />
 
-            <LoadingButton
+            <AppleLoadingButton
               type="submit"
-              className="w-full"
               loading={mutation.isPending}
             >
               Reset Password
-            </LoadingButton>
+            </AppleLoadingButton>
           </div>
 
-          <div className="text-center text-sm">
+          <div className="text-center text-sm text-apple-text-secondary">
             Remember your password?{" "}
-            <RouterLink to="/login" className="underline underline-offset-4">
+            <RouterLink to="/login" className="text-apple-accent hover:underline underline-offset-4">
               Log in
             </RouterLink>
           </div>
         </form>
       </Form>
-    </AuthLayout>
+    </AppleAuthLayout>
   )
 }

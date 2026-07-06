@@ -6,27 +6,8 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 
 import { type UserCreate, UsersService } from "@/client"
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
+import { AppleButton } from "@/components/ui/AppleButton"
+import { AppleDialog, AppleDialogClose, AppleDialogContent, AppleDialogFooter, AppleDialogHeader, AppleDialogTitle, AppleDialogDescription, AppleDialogTrigger } from "@/components/ui/apple/AppleDialog"
 import { LoadingButton } from "@/components/ui/loading-button"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
@@ -90,148 +71,124 @@ const AddUser = () => {
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button className="my-4">
+    <AppleDialog open={isOpen} onOpenChange={setIsOpen}>
+      <AppleDialogTrigger asChild>
+        <AppleButton className="my-4">
           <Plus className="mr-2" />
           Add User
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Add User</DialogTitle>
-          <DialogDescription>
+        </AppleButton>
+      </AppleDialogTrigger>
+      <AppleDialogContent className="sm:max-w-md">
+        <AppleDialogHeader>
+          <AppleDialogTitle>Add User</AppleDialogTitle>
+          <AppleDialogDescription>
             Fill in the form below to add a new user to the system.
-          </DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <div className="grid gap-4 py-4">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      Email <span className="text-destructive">*</span>
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Email"
-                        type="email"
-                        {...field}
-                        required
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+          </AppleDialogDescription>
+        </AppleDialogHeader>
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+          <div className="grid gap-4 py-4">
+            <div>
+              <label className="text-sm font-medium text-apple-text-secondary">
+                Email <span className="text-destructive">*</span>
+              </label>
+              <input
+                placeholder="Email"
+                type="email"
+                className="flex h-11 w-full rounded-xl border border-apple-glass-border/50 bg-apple-glass-bg/70 backdrop-blur-sm px-3.5 py-2.5 text-sm text-apple-text-primary placeholder:text-apple-text-tertiary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-apple-accent/40 focus-visible:border-apple-accent/50 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
+                {...form.register("email")}
+                required
               />
-
-              <FormField
-                control={form.control}
-                name="full_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Full Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Full name" type="text" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      Set Password <span className="text-destructive">*</span>
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Password"
-                        type="password"
-                        {...field}
-                        required
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="confirm_password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      Confirm Password{" "}
-                      <span className="text-destructive">*</span>
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Password"
-                        type="password"
-                        {...field}
-                        required
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="is_superuser"
-                render={({ field }) => (
-                  <FormItem className="flex items-center gap-3 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormLabel className="font-normal">Is superuser?</FormLabel>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="is_active"
-                render={({ field }) => (
-                  <FormItem className="flex items-center gap-3 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormLabel className="font-normal">Is active?</FormLabel>
-                  </FormItem>
-                )}
-              />
+              {form.formState.errors.email && (
+                <p className="text-sm text-destructive mt-1">{form.formState.errors.email.message}</p>
+              )}
             </div>
 
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button variant="outline" disabled={mutation.isPending}>
-                  Cancel
-                </Button>
-              </DialogClose>
-              <LoadingButton type="submit" loading={mutation.isPending}>
-                Save
-              </LoadingButton>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+            <div>
+              <label className="text-sm font-medium text-apple-text-secondary">
+                Full Name
+              </label>
+              <input
+                placeholder="Full name"
+                type="text"
+                className="flex h-11 w-full rounded-xl border border-apple-glass-border/50 bg-apple-glass-bg/70 backdrop-blur-sm px-3.5 py-2.5 text-sm text-apple-text-primary placeholder:text-apple-text-tertiary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-apple-accent/40 focus-visible:border-apple-accent/50 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
+                {...form.register("full_name")}
+              />
+              {form.formState.errors.full_name && (
+                <p className="text-sm text-destructive mt-1">{form.formState.errors.full_name.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-apple-text-secondary">
+                Set Password <span className="text-destructive">*</span>
+              </label>
+              <input
+                placeholder="Password"
+                type="password"
+                className="flex h-11 w-full rounded-xl border border-apple-glass-border/50 bg-apple-glass-bg/70 backdrop-blur-sm px-3.5 py-2.5 text-sm text-apple-text-primary placeholder:text-apple-text-tertiary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-apple-accent/40 focus-visible:border-apple-accent/50 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
+                {...form.register("password")}
+                required
+              />
+              {form.formState.errors.password && (
+                <p className="text-sm text-destructive mt-1">{form.formState.errors.password.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-apple-text-secondary">
+                Confirm Password{" "}
+                <span className="text-destructive">*</span>
+              </label>
+              <input
+                placeholder="Password"
+                type="password"
+                className="flex h-11 w-full rounded-xl border border-apple-glass-border/50 bg-apple-glass-bg/70 backdrop-blur-sm px-3.5 py-2.5 text-sm text-apple-text-primary placeholder:text-apple-text-tertiary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-apple-accent/40 focus-visible:border-apple-accent/50 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
+                {...form.register("confirm_password")}
+                required
+              />
+              {form.formState.errors.confirm_password && (
+                <p className="text-sm text-destructive mt-1">{form.formState.errors.confirm_password.message}</p>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                className="rounded border-apple-glass-border/50 bg-apple-glass-bg/70 w-4 h-4"
+                checked={form.watch("is_superuser")}
+                onChange={(e) => form.setValue("is_superuser", e.target.checked)}
+              />
+              <label className="text-sm font-medium text-apple-text-secondary">
+                Is superuser?
+              </label>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                className="rounded border-apple-glass-border/50 bg-apple-glass-bg/70 w-4 h-4"
+                checked={form.watch("is_active")}
+                onChange={(e) => form.setValue("is_active", e.target.checked)}
+              />
+              <label className="text-sm font-medium text-apple-text-secondary">
+                Is active?
+              </label>
+            </div>
+          </div>
+
+          <AppleDialogFooter>
+            <AppleDialogClose asChild>
+              <AppleButton variant="outline" disabled={mutation.isPending}>
+                Cancel
+              </AppleButton>
+            </AppleDialogClose>
+            <LoadingButton type="submit" loading={mutation.isPending}>
+              Save
+            </LoadingButton>
+          </AppleDialogFooter>
+        </form>
+      </AppleDialogContent>
+    </AppleDialog>
   )
 }
 

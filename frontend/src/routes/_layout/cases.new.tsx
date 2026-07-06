@@ -2,10 +2,8 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { FileUp, Loader2, Scale } from "lucide-react"
 import { useRef, useState } from "react"
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { AppleButton } from "@/components/ui/AppleButton"
+import { GlassCard } from "@/components/ui/GlassCard"
 import { jevx } from "@/lib/jevx"
 
 export const Route = createFileRoute("/_layout/cases/new")({
@@ -24,7 +22,6 @@ function CaseInput() {
   const [loadingMessage, setLoadingMessage] = useState("")
   const [error, setError] = useState("")
 
-  /** 上传文件并直接创建案件 + 提取证据（PDF/DOCX 走后端解析，TXT 前端读取） */
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -40,7 +37,6 @@ function CaseInput() {
 
     try {
       if (ext === "txt") {
-        // TXT: 前端直接读取，填入文本框供用户预览/编辑
         setLoadingMessage("读取文本文件中...")
         const text = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader()
@@ -51,12 +47,10 @@ function CaseInput() {
         setRawText((prev) => prev + (prev ? "\n" : "") + text)
         setLoadingMessage("")
         setLoading(false)
-        // 自动用文件名填充标题
         if (!title.trim()) {
           setTitle(file.name.replace(/\.(txt|pdf|docx)$/i, ""))
         }
       } else {
-        // PDF / DOCX: 上传到后端解析，直接创建案件 + 提取证据
         setLoadingMessage(`正在上传并解析 ${ext.toUpperCase()} 文件...`)
         const caseTitle = title.trim() || file.name.replace(/\.(pdf|docx)$/i, "")
         const caseResult = await jevx.uploadAndCreateCase(file, caseTitle)
@@ -73,12 +67,10 @@ function CaseInput() {
       setError(err instanceof Error ? err.message : "操作失败，请重试")
       setLoadingMessage("")
       setLoading(false)
-      // 重置 file input
       if (fileInputRef.current) fileInputRef.current.value = ""
     }
   }
 
-  /** 手动粘贴文本后提交 */
   const handleSubmit = async () => {
     if (!title.trim()) {
       setError("请输入案件标题")
@@ -109,22 +101,22 @@ function CaseInput() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="flex items-center gap-3">
-        <Scale className="h-8 w-8 text-primary" />
+        <Scale className="h-7 w-7 text-apple-accent" />
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">新建案件</h1>
-          <p className="text-muted-foreground">输入案件材料，AI 自动提取可视化证据</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-apple-text-primary">新建案件</h1>
+          <p className="text-apple-text-secondary">输入案件材料，AI 自动提取可视化证据</p>
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">案件信息</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="case-title">案件标题</Label>
-            <Input
+      <GlassCard>
+        <div className="space-y-4 p-6">
+          <div className="space-y-1.5">
+            <label htmlFor="case-title" className="text-sm font-medium text-apple-text-secondary">
+              案件标题
+            </label>
+            <input
               id="case-title"
+              className="flex h-11 w-full rounded-xl border border-apple-glass-border/50 bg-apple-glass-bg/70 backdrop-blur-sm px-3.5 py-2.5 text-sm text-apple-text-primary placeholder:text-apple-text-tertiary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-apple-accent/40 focus-visible:border-apple-accent/50 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
               placeholder="如：张三故意伤害案"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -132,17 +124,16 @@ function CaseInput() {
             />
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <Label htmlFor="case-text">案件材料</Label>
-              <span className="text-xs text-muted-foreground">
+              <label className="text-sm font-medium text-apple-text-secondary">案件材料</label>
+              <span className="text-xs text-apple-text-tertiary">
                 本系统只提取可视化客观证据，不推测、不捏造。请粘贴判决书或案件材料。
               </span>
             </div>
             <textarea
               id="case-text"
-              rows={18}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full rounded-xl border border-apple-glass-border/50 bg-apple-glass-bg/70 backdrop-blur-sm px-3.5 py-2.5 text-sm text-apple-text-primary placeholder:text-apple-text-tertiary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-apple-accent/40 focus-visible:border-apple-accent/50 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
               style={{ minHeight: 400 }}
               placeholder="在此粘贴判决书全文或案件材料文本..."
               value={rawText}
@@ -150,8 +141,8 @@ function CaseInput() {
               disabled={loading}
             />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </GlassCard>
 
       <div className="flex items-center gap-4">
         <input
@@ -161,39 +152,36 @@ function CaseInput() {
           className="hidden"
           onChange={handleFileUpload}
         />
-        <Button
+        <AppleButton
           variant="outline"
           onClick={() => fileInputRef.current?.click()}
           disabled={loading}
         >
           <FileUp className="mr-2 h-4 w-4" />
-          上传文件（.txt / .pdf / .docx）
-        </Button>
+          上传文件
+        </AppleButton>
 
-        <Button
+        <AppleButton
           onClick={handleSubmit}
           disabled={loading}
-          className="ml-auto min-w-[160px]"
           size="lg"
         >
           {loading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              {loadingMessage || "AI 正在分析证据，请稍候..."}
+              {loadingMessage || "AI 正在分析证据..."}
             </>
           ) : (
             "开始提取证据"
           )}
-        </Button>
+        </AppleButton>
       </div>
 
       {error && (
-        <div className="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        <div className="rounded-2xl border border-destructive/30 bg-destructive/5 px-5 py-3 text-sm text-destructive backdrop-blur-sm">
           {error}
         </div>
       )}
     </div>
   )
 }
-
-// Export via Route only (TanStack Router file-based routing)

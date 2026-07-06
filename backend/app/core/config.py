@@ -57,6 +57,7 @@ class Settings(BaseSettings):
     HUNYUAN_SECRET_ID: str | None = None
     HUNYUAN_SECRET_KEY: str | None = None
     HUNYUAN_REGION: str = "ap-guangzhou"
+    AGNES_API_KEY: str | None = None
     POSTGRES_SERVER: str
     POSTGRES_PORT: int = 5432
     POSTGRES_USER: str

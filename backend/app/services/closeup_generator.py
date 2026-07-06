@@ -40,7 +40,8 @@ def generate_closeup_by_crop(
     scene_image_path: str,
     render_position: dict,
     object_description: str,
-    output_path: str
+    output_path: str,
+    manual_position: dict | None = None,
 ) -> str:
     """
     从场景全图裁出物证区域，生成物证特写图。
@@ -50,6 +51,7 @@ def generate_closeup_by_crop(
     - render_position: SceneObject.render_position（含 area 和 zone）
     - object_description: 物证描述（用于日志）
     - output_path: 输出路径
+    - manual_position: 可选，用户手动点击的位置 {"x": 0.0-1.0, "y": 0.0-1.0}
 
     返回：输出图片路径
     """
@@ -59,8 +61,12 @@ def generate_closeup_by_crop(
     img = Image.open(scene_image_path)
     img_w, img_h = img.size
 
-    # 1. 根据 render_position 计算裁剪中心点
-    cx, cy = _render_position_to_pixel_center(render_position, img_w, img_h)
+    # 1. 计算裁剪中心点 — 优先用手动坐标，否则用预定义 render_position
+    if manual_position and "x" in manual_position and "y" in manual_position:
+        cx = int(manual_position["x"] * img_w)
+        cy = int(manual_position["y"] * img_h)
+    else:
+        cx, cy = _render_position_to_pixel_center(render_position, img_w, img_h)
 
     # 2. 计算裁剪框（以中心点为基准，取 CROP_REGION_RATIO 比例的区域）
     crop_w = int(img_w * CROP_REGION_RATIO)
@@ -160,6 +166,7 @@ def build_prompt_lock_closeup_prompt(
     room_type: str,
     location_key: str = "on_floor",
     case_style: str | None = None,
+    custom_details: str | None = None,
 ) -> str:
     """
     Prompt 锁定法：生成物证特写的 AI prompt。
@@ -169,6 +176,17 @@ def build_prompt_lock_closeup_prompt(
     2. 使用 scene_engine 的 _translate_state() 处理所有状态（不丢失指纹等细节）
     3. 使用真实位置描述（_area_to_natural_language）而非强制 floor
     4. 注入 case 级别的风格描述（如果可用），确保跨场景统一
+    5. 注入用户自定义的细节描述（custom_details），补充物证特征细节
+
+    Args:
+        obj_description: 物证描述（如"带血水果刀"）
+        obj_type: 物证类型（如"物证"）
+        obj_state: 物证状态字典（如 {"血迹": true, "指纹": true}）
+        scene_name: 场景名称
+        room_type: 房间类型（对应 _ROOM_TYPE_EN）
+        location_key: 位置键（如"under_bed_left"）
+        case_style: 案件风格描述（可选）
+        custom_details: 用户自定义的细节描述（可选，如"刀刃上有明显的血迹，血液已经氧化变黑"）
 
     返回英文 prompt。
     """
@@ -204,7 +222,12 @@ def build_prompt_lock_closeup_prompt(
     # 5. 英文类型
     type_en = _OBJ_TYPE_EN.get(obj_type, "evidence item")
 
-    # 6. 组装 prompt
+    # 6. 用户自定义细节描述（翻译为英文）
+    custom_details_en = ""
+    if custom_details and custom_details.strip():
+        custom_details_en = f" Additional visible details: {custom_details.strip()}."
+
+    # 7. 组装 prompt
     evidence_identity = (
         f"A {obj_description}" if obj_description else f"a {type_en}"
     )
@@ -217,6 +240,8 @@ def build_prompt_lock_closeup_prompt(
 
     if full_state_desc:
         prompt += f" Condition: {full_state_desc}."
+
+    prompt += custom_details_en
 
     prompt += (
         f" The item is being photographed in-situ exactly where it was found, "
@@ -373,10 +398,17 @@ def build_inpaint_item_prompt(
     obj_description: str,
     obj_type: str,
     obj_state: dict,
+    custom_details: str | None = None,
 ) -> str:
     """
     构建 inpainting 专用 prompt — 只描述物证本身，不涉及背景环境。
     因为背景来自场景全图裁剪，DALL·E 只需要在 mask 区域绘制物证。
+
+    Args:
+        obj_description: 物证描述
+        obj_type: 物证类型
+        obj_state: 物证状态字典
+        custom_details: 用户自定义的细节描述（可选）
 
     返回英文 prompt。
     """
@@ -387,6 +419,11 @@ def build_inpaint_item_prompt(
 
     evidence_desc = f"A {obj_description}" if obj_description else f"a {type_en}"
 
+    # 用户自定义细节
+    custom_details_en = ""
+    if custom_details and custom_details.strip():
+        custom_details_en = f" Additional visible details: {custom_details.strip()}."
+
     prompt = (
         f"Forensic evidence closeup photograph of {evidence_desc}. "
         f"This is a {type_en}."
@@ -394,6 +431,8 @@ def build_inpaint_item_prompt(
 
     if full_state_desc:
         prompt += f" Condition: {full_state_desc}."
+
+    prompt += custom_details_en
 
     prompt += (
         f" Evidence scale ruler beside the item, evidence label tag visible. "

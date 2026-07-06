@@ -6,7 +6,11 @@ import {
 } from "@tanstack/react-router"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { AuthLayout } from "@/components/Common/AuthLayout"
+
+import { AppleAuthLayout } from "@/components/ui/AppleAuthLayout"
+import { AppleInput } from "@/components/ui/AppleInput"
+import { ApplePasswordInput } from "@/components/ui/apple/ApplePasswordInput"
+import { AppleLoadingButton } from "@/components/ui/apple/AppleLoadingButton"
 import {
   Form,
   FormControl,
@@ -15,9 +19,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { LoadingButton } from "@/components/ui/loading-button"
-import { PasswordInput } from "@/components/ui/password-input"
 import useAuth, { isLoggedIn } from "@/hooks/useAuth"
 
 const formSchema = z
@@ -51,7 +52,7 @@ export const Route = createFileRoute("/signup")({
   head: () => ({
     meta: [
       {
-        title: "Sign Up - FastAPI Template",
+        title: "Sign Up - JEVS",
       },
     ],
   }),
@@ -73,21 +74,24 @@ function SignUp() {
 
   const onSubmit = (data: FormData) => {
     if (signUpMutation.isPending) return
-
-    // exclude confirm_password from submission data
     const { confirm_password: _confirm_password, ...submitData } = data
     signUpMutation.mutate(submitData)
   }
 
   return (
-    <AuthLayout>
+    <AppleAuthLayout>
       <Form {...form}>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
-          className="flex flex-col gap-6"
+          className="flex flex-col gap-5"
         >
-          <div className="flex flex-col items-center gap-2 text-center">
-            <h1 className="text-2xl font-bold">Create an account</h1>
+          <div className="flex flex-col items-center gap-1.5 text-center">
+            <h1 className="text-2xl font-semibold tracking-tight text-apple-text-primary">
+              Create an account
+            </h1>
+            <p className="text-sm text-apple-text-secondary">
+              Judicial Evidence Visualization System
+            </p>
           </div>
 
           <div className="grid gap-4">
@@ -96,9 +100,9 @@ function SignUp() {
               name="full_name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Full Name</FormLabel>
+                  <FormLabel className="text-apple-text-secondary">Full Name</FormLabel>
                   <FormControl>
-                    <Input
+                    <AppleInput
                       data-testid="full-name-input"
                       placeholder="User"
                       type="text"
@@ -115,9 +119,9 @@ function SignUp() {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel className="text-apple-text-secondary">Email</FormLabel>
                   <FormControl>
-                    <Input
+                    <AppleInput
                       data-testid="email-input"
                       placeholder="user@example.com"
                       type="email"
@@ -134,9 +138,9 @@ function SignUp() {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Password</FormLabel>
+                  <FormLabel className="text-apple-text-secondary">Password</FormLabel>
                   <FormControl>
-                    <PasswordInput
+                    <ApplePasswordInput
                       data-testid="password-input"
                       placeholder="Password"
                       {...field}
@@ -152,9 +156,9 @@ function SignUp() {
               name="confirm_password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Confirm Password</FormLabel>
+                  <FormLabel className="text-apple-text-secondary">Confirm Password</FormLabel>
                   <FormControl>
-                    <PasswordInput
+                    <ApplePasswordInput
                       data-testid="confirm-password-input"
                       placeholder="Confirm Password"
                       {...field}
@@ -165,25 +169,22 @@ function SignUp() {
               )}
             />
 
-            <LoadingButton
+            <AppleLoadingButton
               type="submit"
-              className="w-full"
               loading={signUpMutation.isPending}
             >
               Sign Up
-            </LoadingButton>
+            </AppleLoadingButton>
           </div>
 
-          <div className="text-center text-sm">
+          <div className="text-center text-sm text-apple-text-secondary">
             Already have an account?{" "}
-            <RouterLink to="/login" className="underline underline-offset-4">
+            <RouterLink to="/login" className="text-apple-accent hover:underline underline-offset-4">
               Log in
             </RouterLink>
           </div>
         </form>
       </Form>
-    </AuthLayout>
+    </AppleAuthLayout>
   )
 }
-
-export default SignUp

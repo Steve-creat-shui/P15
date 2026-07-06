@@ -4,16 +4,9 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 
 import { type UpdatePassword, UsersService } from "@/client"
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form"
-import { LoadingButton } from "@/components/ui/loading-button"
-import { PasswordInput } from "@/components/ui/password-input"
+import { AppleButton } from "@/components/ui/AppleButton"
+import { GlassCard } from "@/components/ui/GlassCard"
+import { ApplePasswordInput } from "@/components/ui/apple/ApplePasswordInput"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
@@ -66,80 +59,66 @@ const ChangePassword = () => {
   }
 
   return (
-    <div className="max-w-md">
-      <h3 className="text-lg font-semibold py-4">Change Password</h3>
-      <Form {...form}>
-        <form
-          onSubmit={form.handleSubmit(onSubmit)}
-          className="flex flex-col gap-4"
+    <GlassCard>
+      <h3 className="text-lg font-semibold py-4 px-6">Change Password</h3>
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="flex flex-col gap-4 px-6 pb-6"
+      >
+        <div>
+          <label className="text-sm font-medium text-apple-text-secondary">
+            Current Password
+          </label>
+          <ApplePasswordInput
+            data-testid="current-password-input"
+            placeholder="••••••••"
+            className="mt-1.5"
+            {...form.register("current_password")}
+          />
+          {form.formState.errors.current_password && (
+            <p className="text-sm text-destructive mt-1">{form.formState.errors.current_password.message}</p>
+          )}
+        </div>
+
+        <div>
+          <label className="text-sm font-medium text-apple-text-secondary">
+            New Password
+          </label>
+          <ApplePasswordInput
+            data-testid="new-password-input"
+            placeholder="••••••••"
+            className="mt-1.5"
+            {...form.register("new_password")}
+          />
+          {form.formState.errors.new_password && (
+            <p className="text-sm text-destructive mt-1">{form.formState.errors.new_password.message}</p>
+          )}
+        </div>
+
+        <div>
+          <label className="text-sm font-medium text-apple-text-secondary">
+            Confirm Password
+          </label>
+          <ApplePasswordInput
+            data-testid="confirm-password-input"
+            placeholder="••••••••"
+            className="mt-1.5"
+            {...form.register("confirm_password")}
+          />
+          {form.formState.errors.confirm_password && (
+            <p className="text-sm text-destructive mt-1">{form.formState.errors.confirm_password.message}</p>
+          )}
+        </div>
+
+        <AppleButton
+          type="submit"
+          className="self-start"
+          disabled={mutation.isPending}
         >
-          <FormField
-            control={form.control}
-            name="current_password"
-            render={({ field, fieldState }) => (
-              <FormItem>
-                <FormLabel>Current Password</FormLabel>
-                <FormControl>
-                  <PasswordInput
-                    data-testid="current-password-input"
-                    placeholder="••••••••"
-                    aria-invalid={fieldState.invalid}
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="new_password"
-            render={({ field, fieldState }) => (
-              <FormItem>
-                <FormLabel>New Password</FormLabel>
-                <FormControl>
-                  <PasswordInput
-                    data-testid="new-password-input"
-                    placeholder="••••••••"
-                    aria-invalid={fieldState.invalid}
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="confirm_password"
-            render={({ field, fieldState }) => (
-              <FormItem>
-                <FormLabel>Confirm Password</FormLabel>
-                <FormControl>
-                  <PasswordInput
-                    data-testid="confirm-password-input"
-                    placeholder="••••••••"
-                    aria-invalid={fieldState.invalid}
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <LoadingButton
-            type="submit"
-            loading={mutation.isPending}
-            className="self-start"
-          >
-            Update Password
-          </LoadingButton>
-        </form>
-      </Form>
-    </div>
+          {mutation.isPending ? "Updating..." : "Update Password"}
+        </AppleButton>
+      </form>
+    </GlassCard>
   )
 }
 

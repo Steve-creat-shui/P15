@@ -132,6 +132,26 @@ def delete_case(*, session: Session, db_case: Case) -> None:
     session.commit()
 
 
+def delete_generated_image(*, session: Session, image_id: int) -> bool:
+    """Delete a generated image record and its file on disk. Returns True if deleted."""
+    from pathlib import Path
+    db_img = session.get(GeneratedImage, image_id)
+    if not db_img:
+        return False
+    # Delete file from disk
+    if db_img.image_path:
+        static_dir = Path(__file__).resolve().parent.parent.parent / "static"
+        file_path = static_dir / "images" / db_img.image_path
+        try:
+            if file_path.exists():
+                file_path.unlink()
+        except OSError:
+            pass  # File already gone or permission issue
+    session.delete(db_img)
+    session.commit()
+    return True
+
+
 def create_evidences_batch(
     *, session: Session, case_id: int, evidences: list[dict]
 ) -> list[Evidence]:

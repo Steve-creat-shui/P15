@@ -3,7 +3,8 @@ import { createFileRoute } from "@tanstack/react-router"
 import ChangePassword from "@/components/UserSettings/ChangePassword"
 import DeleteAccount from "@/components/UserSettings/DeleteAccount"
 import UserInformation from "@/components/UserSettings/UserInformation"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { AppleTabs, AppleTabsContent, AppleTabsList, AppleTabsTrigger } from "@/components/ui/apple/AppleTabs"
+import { GlassCard } from "@/components/ui/GlassCard"
 import useAuth from "@/hooks/useAuth"
 
 const tabsConfig = [
@@ -17,7 +18,7 @@ export const Route = createFileRoute("/_layout/settings")({
   head: () => ({
     meta: [
       {
-        title: "Settings - FastAPI Template",
+        title: "Settings - JEVS",
       },
     ],
   }),
@@ -34,28 +35,32 @@ function UserSettings() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">User Settings</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-2xl font-semibold tracking-tight text-apple-text-primary">User Settings</h1>
+        <p className="text-apple-text-secondary mt-1">
           Manage your account settings and preferences
         </p>
       </div>
 
-      <Tabs defaultValue="my-profile">
-        <TabsList>
+      <AppleTabs defaultValue="my-profile">
+        <AppleTabsList>
           {finalTabs.map((tab) => (
-            <TabsTrigger key={tab.value} value={tab.value}>
+            <AppleTabsTrigger key={tab.value} value={tab.value}>
               {tab.title}
-            </TabsTrigger>
+            </AppleTabsTrigger>
           ))}
-        </TabsList>
+        </AppleTabsList>
         {finalTabs.map((tab) => (
-          <TabsContent key={tab.value} value={tab.value}>
-            <tab.component />
-          </TabsContent>
+          <AppleTabsContent key={tab.value} value={tab.value}>
+            <GlassCard>
+              <div className="p-6">
+                <tab.component />
+              </div>
+            </GlassCard>
+          </AppleTabsContent>
         ))}
-      </Tabs>
+      </AppleTabs>
     </div>
   )
 }

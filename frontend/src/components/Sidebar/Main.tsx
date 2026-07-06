@@ -1,5 +1,6 @@
 import { Link as RouterLink, useRouterState } from "@tanstack/react-router"
 import type { LucideIcon } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 import {
   SidebarGroup,
@@ -44,6 +45,12 @@ export function Main({ items }: MainProps) {
                   tooltip={item.title}
                   isActive={isActive}
                   asChild
+                  className={cn(
+                    "transition-all duration-200",
+                    isActive
+                      ? "bg-apple-glass-bg-hover/80 text-apple-text-primary"
+                      : "text-apple-text-secondary hover:text-apple-text-primary hover:bg-apple-glass-bg/40"
+                  )}
                 >
                   <RouterLink to={item.path} onClick={handleMenuClick}>
                     <item.icon />

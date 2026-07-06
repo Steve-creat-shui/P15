@@ -9,6 +9,8 @@ from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
+from fastapi.responses import HTMLResponse
+from pydantic import BaseModel
 from sqlmodel import func, select
 
 from app import crud
@@ -25,7 +27,9 @@ from app.schemas.evidence import (
     SceneResponse,
     SceneUpdate,
 )
+from app.schemas.scene import SceneStateSnapshot
 from app.services.document_renderer import (
+    render_case_report,
     render_grid_paper,
     render_a4_document,
     render_chat_screenshot,
@@ -48,6 +52,16 @@ from app.services.scene_engine import (
     suggest_scenes_from_text,
 )
 from app.services.image_router import ImageRouter
+
+
+class ApiKeyConfig(BaseModel):
+    deepseek: str | None = None
+    openai: str | None = None
+    agnes: str | None = None
+    flux: str | None = None
+    hunyuan_secret_id: str | None = None
+    hunyuan_secret_key: str | None = None
+
 
 router = APIRouter(tags=["evidence"])
 
@@ -273,6 +287,7 @@ async def extract_case_evidence(
     session: SessionDep,
     current_user: CurrentUser,
     case_id: int,
+    data: dict | None = None,
 ) -> Any:
     """触发 Evidence Filtering Engine 提取证据。
 
@@ -280,7 +295,20 @@ async def extract_case_evidence(
     将 extractable + uncertain 结果全部存入 Evidence 表，
     non_visualizable_content 也记录为 excluded 条目。
     case.status 更新为 "extracted"。
+
+    请求 body（可选）：
+    {
+        "api_keys": {
+            "deepseek": "your-api-key",
+            "openai": "your-api-key",
+            "agnes": "your-api-key"
+        },
+        "model_type": "deepseek"  // 可选，默认 deepseek，支持 deepseek/openai/agnes
+    }
     """
+    import logging
+    logger = logging.getLogger(__name__)
+
     db_case = crud.get_case(session=session, case_id=case_id)
     if not db_case:
         raise HTTPException(status_code=404, detail="案件不存在")
@@ -288,16 +316,43 @@ async def extract_case_evidence(
     if not db_case.raw_text:
         raise HTTPException(status_code=400, detail="案件没有原始文本可提取")
 
+    api_keys = (data or {}).get("api_keys", {})
+    model_type = (data or {}).get("model_type", "deepseek")
+
+    deepseek_key = api_keys.get("deepseek")
+    openai_key = api_keys.get("openai")
+    agnes_key = api_keys.get("agnes") or api_keys.get("agnes_text")
+
+    # 根据 model_type 获取对应的 API Key
+    if model_type == "deepseek":
+        api_key = deepseek_key
+    elif model_type == "openai":
+        api_key = openai_key
+    elif model_type == "agnes":
+        api_key = agnes_key
+    else:
+        api_key = deepseek_key or openai_key or agnes_key
+
+    logger.info(f"[extract_case_evidence] 案件 ID: {case_id} | 模型类型: {model_type} | API Key 提供: {'是' if api_key else '否'}")
+
     # 调用 Evidence Filtering Engine（若 API Key 未配置则使用规则 fallback）
     used_llm = False
     try:
         from app.core.config import settings
-        if settings.DEEPSEEK_API_KEY or settings.OPENAI_API_KEY:
-            result: EvidenceFilterResult = await extract_evidence(db_case.raw_text)
+        has_key = api_key or (model_type == "deepseek" and settings.DEEPSEEK_API_KEY) or \
+                  (model_type == "openai" and settings.OPENAI_API_KEY) or \
+                  (model_type == "agnes" and settings.AGNES_API_KEY)
+        if has_key:
+            result: EvidenceFilterResult = await extract_evidence(
+                db_case.raw_text, api_key=api_key, model_type=model_type
+            )
             used_llm = True
+            logger.info(f"[extract_case_evidence] LLM 调用成功")
         else:
             result = _mock_extract(db_case.raw_text)
-    except Exception:
+            logger.info(f"[extract_case_evidence] 使用规则式提取器（无 API Key）")
+    except Exception as e:
+        logger.error(f"[extract_case_evidence] LLM 调用失败，fallback 到规则提取器 | 错误: {type(e).__name__}: {str(e)[:100]}")
         # LLM 调用失败时自动 fallback 到规则提取器，确保用户不丢数据
         result = _mock_extract(db_case.raw_text)
 
@@ -513,7 +568,7 @@ def build_scene(
 @router.post("/cases/{case_id}/generate-images")
 async def generate_images(
     case_id: int,
-    data: dict,  # {"scene_id": int, "provider_config": {...}, "provider": "dalle", "style": ...}
+    data: dict,  # {"scene_id": int, "provider_config": {...}, "provider": "dalle", "style": ..., "api_keys": {...}}
     session: SessionDep,
 ) -> Any:
     """
@@ -525,6 +580,7 @@ async def generate_images(
         scene_id = int(scene_id)
     provider_config = data.get("provider_config")
     provider = data.get("provider", "dalle")
+    api_keys = data.get("api_keys", {})
 
     case = session.get(Case, case_id)
     if not case:
@@ -578,7 +634,7 @@ async def generate_images(
     warning = get_scene_prompt_warning(scene_state)
 
     # 生成图片（单次 API 调用，无 [:5] 限制）
-    image_router = ImageRouter(provider_config=provider_config)
+    image_router = ImageRouter(provider_config=provider_config, api_keys=api_keys)
     case_style = case.style_description if case else None
     image_path, omitted_items = await image_router.generate_scene_with_objects(
         scene_state, case_id, case_style=case_style
@@ -619,7 +675,7 @@ async def generate_images(
 @router.post("/cases/{case_id}/generate-all-scenes")
 async def generate_all_scenes(
     case_id: int,
-    data: dict,  # {"provider": "dalle"|"flux"}
+    data: dict,  # {"provider": "dalle"|"flux", "api_keys": {...}}
     session: SessionDep,
 ) -> Any:
     """
@@ -634,6 +690,7 @@ async def generate_all_scenes(
 
     provider = data.get("provider", "dalle")
     provider_config = data.get("provider_config")
+    api_keys = data.get("api_keys", {})
     scenes = crud.get_scenes_by_case(session=session, case_id=case_id)
 
     if not scenes:
@@ -675,7 +732,7 @@ async def generate_all_scenes(
             scene_state.base_room_type = scene.room_type
 
             # 生成图片
-            img_router = ImageRouter(provider_config=provider_config)
+            img_router = ImageRouter(provider_config=provider_config, api_keys=api_keys)
             db_case = session.get(Case, case_id)
             case_style = db_case.style_description if db_case else None
             image_path, omitted_items = await img_router.generate_scene_with_objects(
@@ -746,7 +803,8 @@ async def generate_evidence_closeup(
         raise HTTPException(status_code=404, detail="证据不存在")
 
     provider_config = data.get("provider_config", None)
-    image_router = ImageRouter(provider_config=provider_config)
+    api_keys = data.get("api_keys", {})
+    image_router = ImageRouter(provider_config=provider_config, api_keys=api_keys)
 
     # 查找该物证所在场景的最新全图
     scene_image_path = None
@@ -783,6 +841,12 @@ async def generate_evidence_closeup(
         evidence_category=evidence.category,
     )
 
+    # 获取手动裁剪位置（裁剪法时由前端用户点击传入）
+    manual_position = data.get("crop_position")
+
+    # 获取用户自定义的细节描述
+    custom_details = data.get("custom_details") or None
+
     # 生成特写（自动选择策略）
     # 获取 case 级别风格描述（如果可用）
     db_case = session.get(Case, evidence.case_id)
@@ -794,6 +858,8 @@ async def generate_evidence_closeup(
         scene_name=scene_name,
         room_type=room_type,
         case_style=case_style,
+        manual_position=manual_position,
+        custom_details=custom_details,
     )
 
     # 查找参考预览图（裁剪法才有）
@@ -810,9 +876,15 @@ async def generate_evidence_closeup(
         image_type="evidence_closeup",
         image_path=closeup_path,
         prompt_used=(
-            f"[裁剪法，来自场景全图: {scene_image_path}]"
+            (
+                f"[物证特写·裁剪法] {evidence.description} "
+                f"| 自定义细节: {custom_details or '无'}"
+            )
             if strategy_used == "crop"
-            else object_to_inpaint_prompt(obj)
+            else (
+                f"[物证特写·{strategy_used}] {evidence.description} "
+                f"| 场景: {scene_name} | 自定义细节: {custom_details or '无'}"
+            )
         ),
         provider="crop" if strategy_used == "crop" else image_router.config.get("evidence_closeup", "dalle"),
         style="realistic",
@@ -839,13 +911,90 @@ async def generate_evidence_closeup(
     }
 
 
+@router.post("/evidence/{evidence_id}/generate-injury-closeup")
+async def generate_injury_closeup(
+    evidence_id: int,
+    data: dict,
+    session: SessionDep,
+) -> Any:
+    """生成 AI 伤情特写图。
+
+    与物证特写不同，伤情特写不依赖场景全图裁剪，
+    而是直接通过 AI 生成逼真的受伤部位特写照片。
+
+    请求 body:
+        - body_part: 受伤部位（如"左前臂"、"颈部"）
+        - injury_description: 伤情描述（如"多处擦挫伤"）
+        - gender: 可选，性别（"male" / "female"），不传则从描述中推断
+        - provider_config: 可选，Provider 配置
+        - api_keys: 可选，API Key 配置
+    """
+    evidence = session.get(Evidence, evidence_id)
+    if not evidence:
+        raise HTTPException(status_code=404, detail="证据不存在")
+
+    body_part = data.get("body_part", "")
+    injury_description = data.get("injury_description", evidence.description or "")
+    gender = data.get("gender", None)  # 可选："male" / "female"
+
+    if not body_part:
+        raise HTTPException(status_code=422, detail="请指定受伤部位 (body_part)")
+
+    provider_config = data.get("provider_config", None)
+    api_keys = data.get("api_keys", {})
+    image_router = ImageRouter(provider_config=provider_config, api_keys=api_keys)
+
+    try:
+        closeup_path = await image_router.generate_injury_closeup(
+            case_id=evidence.case_id,
+            evidence_id=evidence_id,
+            body_part=body_part,
+            injury_description=injury_description,
+            gender=gender,
+        )
+    except RuntimeError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"伤情特写生成失败: {str(e)[:300]}",
+        )
+
+    db_image = GeneratedImage(
+        case_id=evidence.case_id,
+        scene_id=evidence.scene_id,
+        image_type="injury_closeup",
+        image_path=closeup_path,
+        prompt_used=f"[伤情特写] 部位: {body_part}, 伤情: {injury_description}, 性别: {gender or 'auto'}",
+        provider=image_router.config.get("evidence_closeup", "dalle"),
+        style="realistic",
+        created_at=datetime.now(timezone.utc),
+    )
+    session.add(db_image)
+    session.commit()
+    session.refresh(db_image)
+
+    return {
+        "id": db_image.id,
+        "case_id": db_image.case_id,
+        "scene_id": db_image.scene_id,
+        "image_type": db_image.image_type,
+        "image_path": db_image.image_path,
+        "provider": db_image.provider,
+        "created_at": db_image.created_at.isoformat() if db_image.created_at else None,
+        "body_part": body_part,
+        "injury_description": injury_description,
+        "gender": gender,
+    }
+
+
 @router.get("/cases/{case_id}/images")
 def get_case_images(
     session: SessionDep,
     current_user: CurrentUser,
     case_id: int,
     image_type: str | None = Query(
-        None, pattern="^(scene_overview|evidence_closeup|document_render)$"
+        None, pattern="^(scene_overview|evidence_closeup|document_render|injury_closeup)$"
     ),
 ) -> Any:
     """获取案件所有生成图片。
@@ -1035,6 +1184,7 @@ async def render_document(
     evidence_id: int,
     data: DocumentRenderRequest,
     session: SessionDep,
+    current_user: CurrentUser,
 ) -> Any:
     """
     根据模板类型调用 Pillow 渲染书证图片。
@@ -1046,37 +1196,47 @@ async def render_document(
 
     # 确定输出目录
     from pathlib import Path
-    output_dir = Path(__file__).resolve().parent.parent.parent / "static" / "images" / str(evidence.case_id) / "documents"
+    output_dir = Path(__file__).resolve().parent.parent.parent.parent / "static" / "images" / str(evidence.case_id) / "documents"
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = str(output_dir / f"doc_{evidence_id}_{int(datetime.now(timezone.utc).timestamp())}.png")
 
-    if data.template_type == "grid_paper":
-        if not data.text_content:
-            raise HTTPException(status_code=422, detail="格子纸模板需要 text_content")
-        image_path = render_grid_paper(
-            text=data.text_content,
-            title=data.title,
-            output_path=output_path,
-        )
-    elif data.template_type == "a4_document":
-        if not data.text_content:
-            raise HTTPException(status_code=422, detail="A4 模板需要 text_content")
-        image_path = render_a4_document(
-            text=data.text_content,
-            title=data.title,
-            document_date=data.document_date,
-            output_path=output_path,
-        )
-    elif data.template_type == "chat_screenshot":
-        if not data.messages:
-            raise HTTPException(status_code=422, detail="聊天截图模板需要 messages")
-        messages_dict = [m.model_dump() for m in data.messages]
-        image_path = render_chat_screenshot(
-            messages=messages_dict,
-            output_path=output_path,
-        )
-    else:
-        raise HTTPException(status_code=400, detail=f"不支持的模板类型: {data.template_type}")
+    try:
+        if data.template_type == "grid_paper":
+            if not data.text_content:
+                raise HTTPException(status_code=422, detail="格子纸模板需要 text_content")
+            image_path = render_grid_paper(
+                text=data.text_content,
+                title=data.title,
+                output_path=output_path,
+            )
+        elif data.template_type == "a4_document":
+            if not data.text_content:
+                raise HTTPException(status_code=422, detail="A4 模板需要 text_content")
+            image_path = render_a4_document(
+                text=data.text_content,
+                title=data.title,
+                document_date=data.document_date,
+                seal_text=data.seal_text,
+                seal_sub_text=data.seal_sub_text,
+                output_path=output_path,
+            )
+        elif data.template_type == "chat_screenshot":
+            if not data.messages:
+                raise HTTPException(status_code=422, detail="聊天截图模板需要 messages")
+            messages_dict = [m.model_dump() for m in data.messages]
+            image_path = render_chat_screenshot(
+                messages=messages_dict,
+                output_path=output_path,
+            )
+        else:
+            raise HTTPException(status_code=400, detail=f"不支持的模板类型: {data.template_type}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.exception(f"[render_document] Pillow rendering failed for evidence {evidence_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"渲染失败: {str(e)[:300]}")
 
     # 存入数据库
     db_image = GeneratedImage(
@@ -1102,4 +1262,57 @@ async def render_document(
         "provider": db_image.provider,
         "style": db_image.style,
         "created_at": db_image.created_at.isoformat() if db_image.created_at else None,
+    }
+
+
+@router.delete("/images/{image_id}")
+def delete_image(image_id: int, session: SessionDep, current_user: CurrentUser) -> dict:
+    """Delete a generated image record and its file."""
+    ok = crud.delete_generated_image(session=session, image_id=image_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Image not found")
+    return {"ok": True}
+
+
+@router.get("/cases/{case_id}/report")
+async def get_case_report(
+    *,
+    session: SessionDep,
+    current_user: CurrentUser,
+    case_id: int,
+    fmt: str = Query("markdown", pattern="^(markdown|html)$"),
+    evidence_ids: str | None = Query(None),
+    image_ids: str | None = Query(None),
+) -> Any:
+    """Render a comprehensive case analysis report in markdown or HTML."""
+    db_case = crud.get_case(session=session, case_id=case_id)
+    if not db_case:
+        raise HTTPException(status_code=404, detail="Case not found")
+
+    evidences = crud.get_evidences_by_case(session=session, case_id=case_id)
+    if evidence_ids:
+        selected = set(int(x.strip()) for x in evidence_ids.split(",") if x.strip())
+        evidences = [e for e in evidences if e.id in selected]
+
+    scene_snapshot = None
+    db_scene = crud.get_scene_by_case(session=session, case_id=case_id)
+    if db_scene:
+        try:
+            state_dict = json.loads(db_scene.state_json)
+            scene_snapshot = SceneStateSnapshot(**state_dict)
+        except Exception:
+            pass
+
+    report = await render_case_report(
+        case=db_case, evidences=evidences, scene_state=scene_snapshot, fmt=fmt,
+    )
+
+    if fmt == "html":
+        return HTMLResponse(content=report)
+
+    return {
+        "case_id": case_id,
+        "format": fmt,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "content": report,
     }

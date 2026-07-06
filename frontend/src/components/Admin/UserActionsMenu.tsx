@@ -2,12 +2,13 @@ import { EllipsisVertical } from "lucide-react"
 import { useState } from "react"
 
 import type { UserPublic } from "@/client"
-import { Button } from "@/components/ui/button"
+import { AppleButton } from "@/components/ui/AppleButton"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+  AppleDropdownMenu,
+  AppleDropdownMenuContent,
+  AppleDropdownMenuTrigger,
+} from "@/components/ui/apple/AppleDropdownMenu"
+import { cn } from "@/lib/utils"
 import useAuth from "@/hooks/useAuth"
 import DeleteUser from "./DeleteUser"
 import EditUser from "./EditUser"
@@ -25,16 +26,21 @@ export const UserActionsMenu = ({ user }: UserActionsMenuProps) => {
   }
 
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon">
-          <EllipsisVertical />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+    <AppleDropdownMenu open={open} onOpenChange={setOpen}>
+      <AppleDropdownMenuTrigger asChild>
+        <AppleButton
+          variant="ghost"
+          className={cn(
+            "size-8 p-0",
+          )}
+        >
+          <EllipsisVertical className="size-4" />
+        </AppleButton>
+      </AppleDropdownMenuTrigger>
+      <AppleDropdownMenuContent align="end">
         <EditUser user={user} onSuccess={() => setOpen(false)} />
         <DeleteUser id={user.id} onSuccess={() => setOpen(false)} />
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </AppleDropdownMenuContent>
+    </AppleDropdownMenu>
   )
 }

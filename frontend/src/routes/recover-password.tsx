@@ -9,7 +9,9 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 
 import { LoginService } from "@/client"
-import { AuthLayout } from "@/components/Common/AuthLayout"
+import { AppleAuthLayout } from "@/components/ui/AppleAuthLayout"
+import { AppleInput } from "@/components/ui/AppleInput"
+import { AppleLoadingButton } from "@/components/ui/apple/AppleLoadingButton"
 import {
   Form,
   FormControl,
@@ -18,8 +20,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { LoadingButton } from "@/components/ui/loading-button"
 import { isLoggedIn } from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
@@ -42,7 +42,7 @@ export const Route = createFileRoute("/recover-password")({
   head: () => ({
     meta: [
       {
-        title: "Recover Password - FastAPI Template",
+        title: "Recover Password - JEVS",
       },
     ],
   }),
@@ -78,14 +78,19 @@ function RecoverPassword() {
   }
 
   return (
-    <AuthLayout>
+    <AppleAuthLayout>
       <Form {...form}>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
-          className="flex flex-col gap-6"
+          className="flex flex-col gap-5"
         >
-          <div className="flex flex-col items-center gap-2 text-center">
-            <h1 className="text-2xl font-bold">Password Recovery</h1>
+          <div className="flex flex-col items-center gap-1.5 text-center">
+            <h1 className="text-2xl font-semibold tracking-tight text-apple-text-primary">
+              Password Recovery
+            </h1>
+            <p className="text-sm text-apple-text-secondary">
+              Enter your email to receive a reset link
+            </p>
           </div>
 
           <div className="grid gap-4">
@@ -94,9 +99,9 @@ function RecoverPassword() {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel className="text-apple-text-secondary">Email</FormLabel>
                   <FormControl>
-                    <Input
+                    <AppleInput
                       data-testid="email-input"
                       placeholder="user@example.com"
                       type="email"
@@ -108,23 +113,22 @@ function RecoverPassword() {
               )}
             />
 
-            <LoadingButton
+            <AppleLoadingButton
               type="submit"
-              className="w-full"
               loading={mutation.isPending}
             >
               Continue
-            </LoadingButton>
+            </AppleLoadingButton>
           </div>
 
-          <div className="text-center text-sm">
+          <div className="text-center text-sm text-apple-text-secondary">
             Remember your password?{" "}
-            <RouterLink to="/login" className="underline underline-offset-4">
+            <RouterLink to="/login" className="text-apple-accent hover:underline underline-offset-4">
               Log in
             </RouterLink>
           </div>
         </form>
       </Form>
-    </AuthLayout>
+    </AppleAuthLayout>
   )
 }

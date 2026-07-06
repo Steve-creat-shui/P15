@@ -2,7 +2,7 @@ import type { ColumnDef } from "@tanstack/react-table"
 import { Check, Copy } from "lucide-react"
 
 import type { ItemPublic } from "@/client"
-import { Button } from "@/components/ui/button"
+import { AppleButton } from "@/components/ui/AppleButton"
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard"
 import { cn } from "@/lib/utils"
 import { ItemActionsMenu } from "./ItemActionsMenu"
@@ -13,10 +13,9 @@ function CopyId({ id }: { id: string }) {
 
   return (
     <div className="flex items-center gap-1.5 group">
-      <span className="font-mono text-xs text-muted-foreground">{id}</span>
-      <Button
+      <span className="font-mono text-xs text-apple-text-secondary">{id}</span>
+      <AppleButton
         variant="ghost"
-        size="icon"
         className="size-6 opacity-0 group-hover:opacity-100 transition-opacity"
         onClick={() => copy(id)}
       >
@@ -26,7 +25,7 @@ function CopyId({ id }: { id: string }) {
           <Copy className="size-3" />
         )}
         <span className="sr-only">Copy ID</span>
-      </Button>
+      </AppleButton>
     </div>
   )
 }
@@ -52,7 +51,7 @@ export const columns: ColumnDef<ItemPublic>[] = [
       return (
         <span
           className={cn(
-            "max-w-xs truncate block text-muted-foreground",
+            "max-w-xs truncate block text-apple-text-secondary",
             !description && "italic",
           )}
         >

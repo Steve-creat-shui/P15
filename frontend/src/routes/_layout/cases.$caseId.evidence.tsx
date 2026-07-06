@@ -9,6 +9,8 @@ import {
   Layers,
   Loader2,
   MapPin,
+  RefreshCw,
+  ZoomIn,
 } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 
@@ -24,6 +26,7 @@ import {
 } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DocumentTemplateForm } from "@/components/JEVS/DocumentTemplateForm"
+import { InjuryCloseupForm } from "@/components/JEVS/InjuryCloseupForm"
 import { jevx, LOCATION_KEYS } from "@/lib/jevx"
 
 type EvidenceItem = {
@@ -61,6 +64,7 @@ function EvidenceReview() {
   const [scenes, setScenes] = useState<SceneInfo[]>([])
   const [loading, setLoading] = useState(true)
   const [docFormExpanded, setDocFormExpanded] = useState<Set<number>>(new Set())
+  const [injuryFormExpanded, setInjuryFormExpanded] = useState<Set<number>>(new Set())
   const [building, setBuilding] = useState(false)
   const [error, setError] = useState("")
 
@@ -182,6 +186,23 @@ function EvidenceReview() {
     } catch {
       return []
     }
+  }
+
+  const hasInjuryKeywords = (description: string): boolean => {
+    const keywords = [
+      "伤", "伤情", "受伤", "擦伤", "挫伤", "淤青", "淤血", "血肿",
+      "骨折", "裂伤", "创口", "伤口", "疤痕", "瘢痕", "抓痕",
+      "烧伤", "烫伤", "刀伤", "刺伤", "砍伤", "钝器伤", "锐器伤",
+      "皮下出血", "表皮剥脱", "红肿", "肿胀", "疼痛",
+      "人身检查", "伤情鉴定", "法医鉴定", "身体检查",
+    ]
+    return keywords.some((kw) => description.includes(kw))
+  }
+
+  const isInjuryEvidence = (ev: EvidenceItem): boolean => {
+    if (ev.evidence_type === "人身检查") return true
+    if (hasInjuryKeywords(ev.description)) return true
+    return false
   }
 
   const renderEvidenceList = (list: EvidenceItem[], showActions: boolean) => {
@@ -309,14 +330,28 @@ function EvidenceReview() {
                     </div>
                   )}
 
-                  {/* Document render button for 书证 */}
-                  {showActions && !excluded && ev.evidence_type === "书证" && (
+                  {/* Document render button for 书证 / 电子数据 */}
+                  {showActions && !excluded && (ev.evidence_type === "书证" || ev.evidence_type === "电子数据") && (
                     <div className="mt-2">
                       {docFormExpanded.has(ev.id) ? (
                         <DocumentTemplateForm
                           evidenceId={ev.id}
                           caseId={Number(caseId)}
+                          defaultTitle={ev.description.slice(0, 30)}
+                          defaultText={ev.description}
+                          suggestedTemplate={
+                            ev.description.includes("聊天") || ev.description.includes("微信") || ev.description.includes("短信")
+                              ? "chat_screenshot"
+                              : ev.description.includes("通话")
+                              ? "a4_document"
+                              : ev.evidence_type === "电子数据"
+                              ? "a4_document"
+                              : undefined
+                          }
                           onSuccess={(_img) => {
+                            // Keep form open so user can see the preview
+                          }}
+                          onClose={() => {
                             setDocFormExpanded((prev) => {
                               const next = new Set(prev)
                               next.delete(ev.id)
@@ -334,7 +369,39 @@ function EvidenceReview() {
                           }
                         >
                           <FileText className="mr-1 h-3.5 w-3.5" />
-                          渲染书证
+                          {ev.evidence_type === "电子数据" ? "渲染电子数据" : "渲染书证"}
+                        </Button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* AI injury closeup button for injury-related evidence */}
+                  {showActions && !excluded && isInjuryEvidence(ev) && (
+                    <div className="mt-2">
+                      {injuryFormExpanded.has(ev.id) ? (
+                        <InjuryCloseupForm
+                          evidenceId={ev.id}
+                          caseId={Number(caseId)}
+                          defaultDescription={ev.description}
+                          onSuccess={(_img) => {
+                            setInjuryFormExpanded((prev) => {
+                              const next = new Set(prev)
+                              next.delete(ev.id)
+                              return next
+                            })
+                          }}
+                        />
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={() =>
+                            setInjuryFormExpanded((prev) => new Set(prev).add(ev.id))
+                          }
+                        >
+                          <ZoomIn className="mr-1 h-3.5 w-3.5" />
+                          AI 伤情特写
                         </Button>
                       )}
                     </div>
@@ -379,6 +446,20 @@ function EvidenceReview() {
                   </div>
                 )}
 
+                {showActions && excluded && (
+                  <div className="flex flex-col gap-1.5 shrink-0">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 border-amber-500 text-amber-700 dark:text-amber-400"
+                      onClick={() => handleApprove(ev.id)}
+                    >
+                      <RefreshCw className="mr-1 h-3.5 w-3.5" />
+                      恢复
+                    </Button>
+                  </div>
+                )}
+
                 {!showActions && (
                   <Eye className="mt-1 h-4 w-4 text-muted-foreground shrink-0" />
                 )}
@@ -416,6 +497,7 @@ function EvidenceReview() {
           </Button>
           <Button
             variant="outline"
+            size="sm"
             onClick={handleBuildScene}
             disabled={building || extractable.filter((e) => e.is_approved).length === 0}
           >
@@ -433,6 +515,8 @@ function EvidenceReview() {
                 params: { caseId },
               })
             }
+            variant="outline"
+            size="sm"
           >
             前往生成图片
             <ArrowRight className="ml-2 h-4 w-4" />
@@ -447,7 +531,7 @@ function EvidenceReview() {
       )}
 
       <Tabs defaultValue="extractable">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-3 bg-muted border border-border/30">
           <TabsTrigger value="extractable" className="flex items-center gap-2">
             🟢 可视化证据
             <Badge variant="secondary" className="ml-1 text-xs">
@@ -478,7 +562,7 @@ function EvidenceReview() {
         </TabsContent>
 
         <TabsContent value="non_visualizable" className="mt-4">
-          {renderEvidenceList(nonVisual, false)}
+          {renderEvidenceList(nonVisual, true)}
         </TabsContent>
       </Tabs>
     </div>

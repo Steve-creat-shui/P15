@@ -6,26 +6,8 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 
 import { type ItemCreate, ItemsService } from "@/client"
-import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
+import { AppleButton } from "@/components/ui/AppleButton"
+import { AppleDialog, AppleDialogClose, AppleDialogContent, AppleDialogFooter, AppleDialogHeader, AppleDialogTitle, AppleDialogDescription, AppleDialogTrigger } from "@/components/ui/apple/AppleDialog"
 import { LoadingButton } from "@/components/ui/loading-button"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
@@ -71,73 +53,67 @@ const AddItem = () => {
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button className="my-4">
+    <AppleDialog open={isOpen} onOpenChange={setIsOpen}>
+      <AppleDialogTrigger asChild>
+        <AppleButton className="my-4">
           <Plus className="mr-2" />
           Add Item
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Add Item</DialogTitle>
-          <DialogDescription>
+        </AppleButton>
+      </AppleDialogTrigger>
+      <AppleDialogContent className="sm:max-w-md">
+        <AppleDialogHeader>
+          <AppleDialogTitle>Add Item</AppleDialogTitle>
+          <AppleDialogDescription>
             Fill in the details to add a new item.
-          </DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <div className="grid gap-4 py-4">
-              <FormField
-                control={form.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      Title <span className="text-destructive">*</span>
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Title"
-                        type="text"
-                        {...field}
-                        required
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+          </AppleDialogDescription>
+        </AppleDialogHeader>
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+          <div className="grid gap-4 py-4">
+            <div>
+              <label className="text-sm font-medium text-apple-text-secondary">
+                Title <span className="text-destructive">*</span>
+              </label>
+              <input
+                placeholder="Title"
+                type="text"
+                className="flex h-11 w-full rounded-xl border border-apple-glass-border/50 bg-apple-glass-bg/70 backdrop-blur-sm px-3.5 py-2.5 text-sm text-apple-text-primary placeholder:text-apple-text-tertiary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-apple-accent/40 focus-visible:border-apple-accent/50 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
+                {...form.register("title")}
+                required
               />
-
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Description" type="text" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {form.formState.errors.title && (
+                <p className="text-sm text-destructive mt-1">{form.formState.errors.title.message}</p>
+              )}
             </div>
 
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button variant="outline" disabled={mutation.isPending}>
-                  Cancel
-                </Button>
-              </DialogClose>
-              <LoadingButton type="submit" loading={mutation.isPending}>
-                Save
-              </LoadingButton>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+            <div>
+              <label className="text-sm font-medium text-apple-text-secondary">
+                Description
+              </label>
+              <input
+                placeholder="Description"
+                type="text"
+                className="flex h-11 w-full rounded-xl border border-apple-glass-border/50 bg-apple-glass-bg/70 backdrop-blur-sm px-3.5 py-2.5 text-sm text-apple-text-primary placeholder:text-apple-text-tertiary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-apple-accent/40 focus-visible:border-apple-accent/50 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
+                {...form.register("description")}
+              />
+              {form.formState.errors.description && (
+                <p className="text-sm text-destructive mt-1">{form.formState.errors.description.message}</p>
+              )}
+            </div>
+          </div>
+
+          <AppleDialogFooter>
+            <AppleDialogClose asChild>
+              <AppleButton variant="outline" disabled={mutation.isPending}>
+                Cancel
+              </AppleButton>
+            </AppleDialogClose>
+            <LoadingButton type="submit" loading={mutation.isPending}>
+              Save
+            </LoadingButton>
+          </AppleDialogFooter>
+        </form>
+      </AppleDialogContent>
+    </AppleDialog>
   )
 }
 
